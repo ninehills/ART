@@ -1,0 +1,40 @@
+{
+  "results": [
+    {
+      "url": "https://www.openpipe.ai",
+      "question": "Find all the open jobs and descriptions and salary ranges for this company",
+      "answer": "I am unable to access the OpenPipe website due to a technical issue with navigation. Therefore, I cannot retrieve the open jobs, descriptions, or salary ranges for this company at this time.",
+      "score": 0.1,
+      "justification": "The answer does not provide any information about open jobs, descriptions, or salary ranges from the provided URL. It acknowledges the inability to access the information, but does not address the question or provide evidence from the page."
+    },
+    {
+      "url": "https://www.withflex.com/shop",
+      "question": "Find all the open jobs and descriptions and salary ranges for this company",
+      "answer": "",
+      "score": 0.0,
+      "justification": "The provided page (https://www.withflex.com/shop) does not contain any information about open jobs, job descriptions, or salary ranges. The answer does not address the question, lacks evidence from the page, and does not provide any relevant or specific details."
+    },
+    {
+      "url": "https://www.trymartin.com/",
+      "question": "Find all the open jobs and descriptions and salary ranges for this company",
+      "answer": "",
+      "score": 0.0,
+      "justification": "The answer does not provide any information about open jobs, descriptions, or salary ranges from the provided URL. No relevant details are given."
+    },
+    {
+      "url": "https://www.healthtech1.uk/",
+      "question": "Find all the open jobs and descriptions and salary ranges for this company",
+      "answer": "",
+      "score": 0.0,
+      "justification": "The provided page does not display any open jobs, job descriptions, or salary ranges. There is no evidence or specific information about careers or vacancies on the site, so the answer cannot be given based on the available content."
+    },
+    {
+      "url": "https://www.feanixbio.com/",
+      "question": "Find all the open jobs and descriptions and salary ranges for this company",
+      "answer": "I am unable to access https://www.feanixbio.com/ due to a technical issue. Please check the URL or try again later.",
+      "score": 0.0,
+      "justification": "The answer does not provide any information about open jobs, descriptions, or salary ranges from the provided URL. It does not address the question or use evidence from the page."
+    }
+  ],
+  "avg_score": 0.02
+}
