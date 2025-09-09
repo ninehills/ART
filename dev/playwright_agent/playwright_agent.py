@@ -23,13 +23,16 @@ from tqdm.asyncio import tqdm_asyncio
 load_dotenv()
 
 MODEL = os.getenv("MODEL", "gpt-4.1")
-SUMMARIZE_MODEL = os.getenv("SUMMARIZE_MODEL", "gpt-4.1")
+SUMMARIZE_MODEL = os.getenv("SUMMARIZE_MODEL", "gpt-4.1-mini")
 JUDGE_MODEL = os.getenv("JUDGE_MODEL", "gpt-4.1")
 MAX_STEPS = int(os.getenv("MAX_STEPS", "30"))
 DEFAULT_CONCURRENCY = int(os.getenv("CONCURRENCY", "5"))
 
+RUNPOD_BASE_URL = "https://pq2dmneot79chc-8000.proxy.runpod.net/v1"
+RUNPOD_API_KEY = "sk-IrR7Bwxtin0haWagUnPrBgq5PurnUz86"
+
 PLAYWRIGHT_STDIO = StdioServerParameters(
-    command="npx", args=["-y", "@playwright/mcp@latest", "--isolated", "--headless"]
+    command="npx", args=["-y", "@playwright/mcp@latest", "--isolated"]
 )
 
 RETURN_ANSWER_TOOL = {
@@ -214,13 +217,15 @@ async def run_single(url: str, question: str, summarize_tool_responses: bool) ->
                 },
             ]
             for _ in range(MAX_STEPS):
-                async with AsyncOpenAI() as client:
+                async with AsyncOpenAI(
+                    base_url=RUNPOD_BASE_URL, api_key=RUNPOD_API_KEY
+                ) as client:
                     resp = await client.chat.completions.create(
-                        model=MODEL,
+                        model="Qwen/Qwen2.5-14B-Instruct",
                         messages=msgs,
                         tools=tools,
                         tool_choice="auto",
-                        temperature=0.2,
+                        # temperature=0.2,
                     )
                 m = resp.choices[0].message
                 tcalls = m.tool_calls or []
@@ -394,8 +399,10 @@ if __name__ == "__main__":
     )
     ap.add_argument("--summarize_tool_responses", action="store_true")
     ap.add_argument("--out", default="eval_results.json")
+    ap.add_argument("--model", default=MODEL)
     args = ap.parse_args()
 
+    MODEL = args.model
     data = json.load(open(args.input_json))
     out = asyncio.run(run_dataset(data, args.summarize_tool_responses))
     with open(args.out, "w", encoding="utf-8") as f:
