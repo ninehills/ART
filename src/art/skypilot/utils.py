@@ -23,7 +23,7 @@ async def get_task_status(cluster_name: str, task_name: str) -> sky.JobStatus | 
     return None
 
 
-async def get_task_job_id(cluster_name: str, task_name: str) -> str | None:
+async def get_task_job_id(cluster_name: str, task_name: str) -> int | None:
     job_queue = await to_thread_typed(
         lambda: sky.stream_and_get(sky.queue(cluster_name))
     )

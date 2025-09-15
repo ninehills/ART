@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, cast
 
 import semver
 import sky
+import sky.clouds
 from dotenv import dotenv_values
 
 from .. import dev
@@ -25,7 +26,7 @@ if TYPE_CHECKING:
 class SkyPilotBackend(Backend):
     _cluster_name: str
     _envs: dict[str, str]
-    _art_server_job_id: str | None
+    _art_server_job_id: int | None
 
     @classmethod
     async def initialize_cluster(
