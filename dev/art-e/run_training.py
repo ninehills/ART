@@ -126,7 +126,7 @@ def launch_model(model_key: str):
         workdir=".",  # Sync the project directory
         envs=dict(dotenv_values()),  # type: ignore
     )
-    task.set_resources(sky.Resources(accelerators="H100-SXM:1"))
+    task.set_resources(sky.Resources(accelerators=model.config.accelerator))
     task.set_file_mounts({"~/ART": "../.."})
 
     # Generate cluster name

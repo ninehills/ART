@@ -38,3 +38,6 @@ class ProjectPolicyConfig(BaseModel):
 
     # Validation configuration
     num_validation_runs: int = 1  # Number of times to run each validation entry
+
+    # Hardware configuration
+    accelerator: str = "H100-SXM:1"  # GPU accelerator type for training

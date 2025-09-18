@@ -28,7 +28,7 @@ dependencies = [
     "openpipe-art[backend,plotting]",
     "weave>=0.51.53",
     "accelerate==1.7.0",
-    "litellm==1.73.6",
+    "litellm==1.74.1",
     "tenacity>=9.1.2",
 ]
 
@@ -51,7 +51,4 @@ art-e = { workspace = true }
 openpipe-art = { path = "../../", editable = true }
 
 [dependency-groups]
-dev = [
-    "art-e",
-    "ruff>=0.12.3",
-]
+dev = ["art-e", "ruff>=0.12.3"]

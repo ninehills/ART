@@ -315,7 +315,7 @@ requires-dist = [
     { name = "ipywidgets", specifier = ">=8.1.6" },
     { name = "kaggle", specifier = ">=1.5.12" },
     { name = "langchain-core", specifier = ">=0.3.51" },
-    { name = "litellm", specifier = "==1.73.6" },
+    { name = "litellm", specifier = "==1.74.1" },
     { name = "mail-parser", specifier = ">=3.15.0" },
     { name = "matplotlib", specifier = ">=3.10.1" },
     { name = "openpipe-art", extras = ["backend", "plotting"], editable = "../../" },
@@ -1330,6 +1330,15 @@ standard = [
 ]
 
 [[package]]
+name = "fastjsonschema"
+version = "2.21.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/20/b5/23b216d9d985a956623b6bd12d4086b60f0059b27799f23016af04a74ea1/fastjsonschema-2.21.2.tar.gz", hash = "sha256:b1eb43748041c880796cd077f1a07c3d94e93ae84bba5ed36800a33554ae05de", size = 374130, upload-time = "2025-08-14T18:49:36.666Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cb/a8/20d0723294217e47de6d9e2e40fd4a9d2f7c4b6ef974babd482a59743694/fastjsonschema-2.21.2-py3-none-any.whl", hash = "sha256:1c797122d0a86c5cace2e54bf4e819c36223b552017172f32c5c024a6b77e463", size = 24024, upload-time = "2025-08-14T18:49:34.776Z" },
+]
+
+[[package]]
 name = "fastrlock"
 version = "0.8.3"
 source = { registry = "https://pypi.org/simple" }
@@ -2275,7 +2284,7 @@ wheels = [
 
 [[package]]
 name = "litellm"
-version = "1.73.6"
+version = "1.74.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -2290,9 +2299,9 @@ dependencies = [
     { name = "tiktoken" },
     { name = "tokenizers" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/26/58/1a8ecf64b9a1f01dbddc123200f3156638c919fc3de683bd206235ccd33c/litellm-1.73.6.tar.gz", hash = "sha256:072ff9225aaa9caafe0fa9782df0ba4c93f893791cc55dd5ed218a401e788e88", size = 8750656, upload-time = "2025-06-28T20:05:38.654Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c9/25/8253bbc904d69b61806fc76e6c9c11509b4270ac201eeff6e5f95a5f2d01/litellm-1.74.1.tar.gz", hash = "sha256:0e0c83356c33885dce379cd86d38a728e870dbaaf43ae50e9d0153e29c207a85", size = 9215296, upload-time = "2025-07-10T15:31:13.968Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/81/be/3e9a3097c3b25bd1bc24073afdf5e6316120d8f4127e38bd6dcc3e193f55/litellm-1.73.6-py3-none-any.whl", hash = "sha256:98b3c7f436e6521e280f98faf9bad06c4c76d6a1678db2b370ffa175c206d288", size = 8467603, upload-time = "2025-06-28T20:05:36.325Z" },
+    { url = "https://files.pythonhosted.org/packages/b9/3e/440c4ea5088c2c251ea711930e7bb4b1021b091fb3cbf512ca426af16f1e/litellm-1.74.1-py3-none-any.whl", hash = "sha256:72fe93ad7310db872543b51cc3ec4b13d4b0e1d7e636f20cd3940544ce2fb020", size = 8564714, upload-time = "2025-07-10T15:31:11.106Z" },
 ]
 
 [[package]]
@@ -2872,6 +2881,52 @@ wheels = [
 ]
 
 [[package]]
+name = "nbclient"
+version = "0.10.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "jupyter-client" },
+    { name = "jupyter-core" },
+    { name = "nbformat" },
+    { name = "traitlets" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/87/66/7ffd18d58eae90d5721f9f39212327695b749e23ad44b3881744eaf4d9e8/nbclient-0.10.2.tar.gz", hash = "sha256:90b7fc6b810630db87a6d0c2250b1f0ab4cf4d3c27a299b0cde78a4ed3fd9193", size = 62424, upload-time = "2024-12-19T10:32:27.164Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/34/6d/e7fa07f03a4a7b221d94b4d586edb754a9b0dc3c9e2c93353e9fa4e0d117/nbclient-0.10.2-py3-none-any.whl", hash = "sha256:4ffee11e788b4a27fabeb7955547e4318a5298f34342a4bfd01f2e1faaeadc3d", size = 25434, upload-time = "2024-12-19T10:32:24.139Z" },
+]
+
+[[package]]
+name = "nbformat"
+version = "5.10.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "fastjsonschema" },
+    { name = "jsonschema" },
+    { name = "jupyter-core" },
+    { name = "traitlets" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6d/fd/91545e604bc3dad7dca9ed03284086039b294c6b3d75c0d2fa45f9e9caf3/nbformat-5.10.4.tar.gz", hash = "sha256:322168b14f937a5d11362988ecac2a4952d3d8e3a2cbeb2319584631226d5b3a", size = 142749, upload-time = "2024-04-04T11:20:37.371Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a9/82/0340caa499416c78e5d8f5f05947ae4bc3cba53c9f038ab6e9ed964e22f1/nbformat-5.10.4-py3-none-any.whl", hash = "sha256:3b48d6c8fbca4b299bf3982ea7db1af21580e4fec269ad087b9e81588891200b", size = 78454, upload-time = "2024-04-04T11:20:34.895Z" },
+]
+
+[[package]]
+name = "nbmake"
+version = "1.5.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "ipykernel" },
+    { name = "nbclient" },
+    { name = "nbformat" },
+    { name = "pygments" },
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/43/9a/aae201cee5639e1d562b3843af8fd9f8d018bb323e776a2b973bdd5fc64b/nbmake-1.5.5.tar.gz", hash = "sha256:239dc868ea13a7c049746e2aba2c229bd0f6cdbc6bfa1d22f4c88638aa4c5f5c", size = 85929, upload-time = "2024-12-23T18:33:46.774Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/eb/be/b257e12f9710819fde40adc972578bee6b72c5992da1bc8369bef2597756/nbmake-1.5.5-py3-none-any.whl", hash = "sha256:c6fbe6e48b60cacac14af40b38bf338a3b88f47f085c54ac5b8639ff0babaf4b", size = 12818, upload-time = "2024-12-23T18:33:44.566Z" },
+]
+
+[[package]]
 name = "nest-asyncio"
 version = "1.6.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3212,7 +3267,7 @@ wheels = [
 
 [[package]]
 name = "openpipe-art"
-version = "0.4.5"
+version = "0.4.11"
 source = { editable = "../../" }
 dependencies = [
     { name = "litellm" },
@@ -3226,9 +3281,13 @@ backend = [
     { name = "accelerate" },
     { name = "awscli" },
     { name = "bitsandbytes", marker = "sys_platform == 'linux'" },
+    { name = "gql" },
     { name = "hf-xet" },
+    { name = "nbclient" },
+    { name = "nbmake" },
     { name = "peft" },
     { name = "polars" },
+    { name = "pytest" },
     { name = "setproctitle" },
     { name = "setuptools", version = "79.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "setuptools", version = "80.9.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
@@ -3253,17 +3312,24 @@ requires-dist = [
     { name = "accelerate", marker = "extra == 'backend'", specifier = "==1.7.0" },
     { name = "awscli", marker = "extra == 'backend'", specifier = ">=1.38.1" },
     { name = "bitsandbytes", marker = "extra == 'backend'", specifier = ">=0.45.2" },
+    { name = "gql", marker = "extra == 'backend'", specifier = "<4" },
     { name = "hf-xet", marker = "extra == 'backend'", specifier = ">=1.1.0" },
-    { name = "litellm", specifier = ">=1.63.0" },
+    { name = "langchain-core", marker = "extra == 'langgraph'", specifier = ">=0.3.51" },
+    { name = "langchain-openai", marker = "extra == 'langgraph'", specifier = ">=0.3.27" },
+    { name = "langgraph", marker = "extra == 'langgraph'", specifier = ">=0.6.2" },
+    { name = "litellm", specifier = "==1.74.1" },
     { name = "matplotlib", marker = "extra == 'plotting'", specifier = ">=3.10.1" },
-    { name = "openai", specifier = ">=1.65.5" },
+    { name = "nbclient", marker = "extra == 'backend'", specifier = ">=0.10.1" },
+    { name = "nbmake", marker = "extra == 'backend'", specifier = ">=1.5.5" },
+    { name = "openai", specifier = ">=1.65.5,<=1.99.1" },
     { name = "peft", marker = "extra == 'backend'", specifier = ">=0.14.0" },
     { name = "polars", marker = "extra == 'backend'", specifier = ">=1.26.0" },
+    { name = "pytest", marker = "extra == 'backend'", specifier = ">=8.4.1" },
     { name = "seaborn", marker = "extra == 'plotting'", specifier = ">=0.13.2" },
     { name = "semver", marker = "extra == 'skypilot'", specifier = ">=3.0.4" },
     { name = "setproctitle", marker = "extra == 'backend'", specifier = ">=1.3.6" },
     { name = "setuptools", marker = "extra == 'backend'", specifier = ">=78.1.0" },
-    { name = "skypilot", extras = ["cudo", "do", "fluidstack", "gcp", "lambda", "paperspace", "runpod"], marker = "extra == 'skypilot'", specifier = "==0.9.3" },
+    { name = "skypilot", extras = ["cudo", "do", "fluidstack", "gcp", "lambda", "kubernetes", "paperspace", "runpod"], marker = "extra == 'skypilot'", specifier = "==0.10.2" },
     { name = "tblib", marker = "extra == 'backend'", specifier = ">=3.0.0" },
     { name = "torch", marker = "extra == 'backend'", specifier = ">=2.7.0" },
     { name = "torchao", marker = "extra == 'backend'", specifier = ">=0.9.0" },
@@ -3272,13 +3338,13 @@ requires-dist = [
     { name = "trl", marker = "extra == 'backend'", specifier = "==0.20.0" },
     { name = "trl", marker = "extra == 'backend'", specifier = ">=0.19.0" },
     { name = "typer", specifier = ">=0.15.2" },
-    { name = "unsloth", marker = "extra == 'backend'", specifier = "==2025.8.1" },
-    { name = "unsloth-zoo", marker = "extra == 'backend'", git = "https://github.com/bradhilton/unsloth-zoo" },
-    { name = "vllm", marker = "extra == 'backend'", specifier = "==0.10.0" },
-    { name = "wandb", marker = "extra == 'backend'", specifier = ">=0.19.8" },
+    { name = "unsloth", marker = "extra == 'backend'", specifier = "==2025.9.6" },
+    { name = "unsloth-zoo", marker = "extra == 'backend'", specifier = "==2025.9.7" },
+    { name = "vllm", marker = "extra == 'backend'", specifier = ">=0.9.2,<=0.10.0" },
+    { name = "wandb", marker = "extra == 'backend'", specifier = "==0.21.0" },
     { name = "weave", specifier = ">=0.51.51" },
 ]
-provides-extras = ["plotting", "backend", "skypilot"]
+provides-extras = ["plotting", "backend", "skypilot", "langgraph"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -3286,7 +3352,12 @@ dev = [
     { name = "hatch", specifier = ">=1.14.1" },
     { name = "ipykernel", specifier = ">=6.29.5" },
     { name = "ipywidgets", specifier = ">=8.1.5" },
+    { name = "nbval", specifier = ">=0.11.0" },
     { name = "openpipe", specifier = ">=4.49.0" },
+    { name = "pyright", extras = ["nodejs"], specifier = ">=1.1.403" },
+    { name = "pytest", specifier = ">=8.4.1" },
+    { name = "pytest-asyncio", specifier = ">=1.1.0" },
+    { name = "pytest-xdist", specifier = ">=3.8.0" },
     { name = "ruff", specifier = ">=0.12.1" },
 ]
 
@@ -6069,7 +6140,7 @@ wheels = [
 
 [[package]]
 name = "unsloth"
-version = "2025.8.1"
+version = "2025.9.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "accelerate" },
@@ -6096,15 +6167,15 @@ dependencies = [
     { name = "wheel" },
     { name = "xformers", marker = "sys_platform == 'linux'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e7/2c/8d89c085c1456a8bfbd3107aa79ed1256612327cc6436ed5dfb783a1c40e/unsloth-2025.8.1.tar.gz", hash = "sha256:86413e7fa6a982296b1349454d645ef0f12f450ef562ea07a5083377f47f15a2", size = 257556, upload-time = "2025-08-02T10:41:17.224Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d3/a8/7e41cf6cac6e914e0b7570bfc2bb4cad4edf75894de71ad060f8c125070c/unsloth-2025.9.6.tar.gz", hash = "sha256:f2171e476d2f61760913b749d431eaf5802f0bb6b42564be54ff39e4341f7bea", size = 272516, upload-time = "2025-09-16T15:55:21.394Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d9/d0/184903cbcb80b7bbd5c96afedb3e91beafc5df8c1a114b823419d381a3a3/unsloth-2025.8.1-py3-none-any.whl", hash = "sha256:3f3a407f85c084baaca7704b242627556b890f2fdb64ec0d3cb726864616f47e", size = 299780, upload-time = "2025-08-02T10:41:14.996Z" },
+    { url = "https://files.pythonhosted.org/packages/68/44/90ccb739e0c29f012713e90d9fa4e3a84374b2f8581428f4e2f62c22d869/unsloth-2025.9.6-py3-none-any.whl", hash = "sha256:beb6f7e46ba1112b79d3f8efab095f671120b1231c30e7ce215a49af145aa08f", size = 312623, upload-time = "2025-09-16T15:55:18.245Z" },
 ]
 
 [[package]]
 name = "unsloth-zoo"
-version = "2025.8.1"
-source = { git = "https://github.com/bradhilton/unsloth-zoo#01d831919d5be58c5f0ce912db522e8cb9494b3e" }
+version = "2025.9.7"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "accelerate" },
     { name = "cut-cross-entropy" },
@@ -6121,6 +6192,7 @@ dependencies = [
     { name = "regex" },
     { name = "sentencepiece" },
     { name = "torch" },
+    { name = "torchao" },
     { name = "tqdm" },
     { name = "transformers" },
     { name = "triton", marker = "sys_platform == 'linux'" },
@@ -6129,6 +6201,10 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "tyro" },
     { name = "wheel" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/68/c8/7d38ff6db313bb024cc101eeb0a4f765b65ad9f833c76fd51848bf98bb41/unsloth_zoo-2025.9.7.tar.gz", hash = "sha256:58ef9f906b7969f98709f113965e81e54c670b650a4329091e4f740012445e32", size = 210478, upload-time = "2025-09-16T15:48:50.924Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0c/f0/4b9a13894ec43f194f53b11ecfe3528377e1620794441dc8233f78f367c0/unsloth_zoo-2025.9.7-py3-none-any.whl", hash = "sha256:69a822eb1af0b1b199b11cc5ce084015ef50f238d52314318929ac1311ad0583", size = 229062, upload-time = "2025-09-16T15:48:49.044Z" },
 ]
 
 [[package]]
