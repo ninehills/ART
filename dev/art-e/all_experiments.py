@@ -246,9 +246,9 @@ models["236"].name = "email-agent-236"
 # models["236"].config.train_on_stepwise_groups = True
 
 # Model 237: Like 206 but using DecoupledUnslothService and H200 GPU
-models["237"] = models["206"].model_copy(deep=True)
+models["237"] = models["008"].model_copy(deep=True)
 models["237"].name = "email-agent-237"
-models["237"].config.accelerator = "H200-SXM:1"
-models["237"]._internal_config = art.dev.InternalModelConfig(
-    _decouple_vllm_and_unsloth=True,
-)
+models["237"].config.accelerator = "H200:1"
+# models["237"]._internal_config = art.dev.InternalModelConfig(
+#     _decouple_vllm_and_unsloth=True,
+# )
