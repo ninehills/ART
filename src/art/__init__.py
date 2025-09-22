@@ -33,6 +33,7 @@ from . import dev
 from .auto_trajectory import auto_trajectory, capture_auto_trajectory
 from .backend import Backend
 from .batches import trajectory_group_batches
+from .client import Client
 from .gather import gather_trajectories, gather_trajectory_groups
 from .model import Model, TrainableModel
 from .trajectories import Trajectory, TrajectoryGroup
@@ -48,6 +49,7 @@ __all__ = [
     "gather_trajectory_groups",
     "trajectory_group_batches",
     "Backend",
+    "Client",
     "Messages",
     "MessagesAndChoices",
     "Tools",
