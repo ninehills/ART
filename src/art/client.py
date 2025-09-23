@@ -12,12 +12,20 @@ from openai._version import __version__
 from openai.resources.models import AsyncModels  # noqa
 from typing_extensions import override
 
-from openai import AsyncOpenAI, _exceptions
+from openai import AsyncOpenAI, BaseModel, _exceptions
 
 
-class Model:
-    def __init__(self, id: str) -> None:
-        self.id = id
+class Model(BaseModel):
+    entity: str
+    project: str
+    name: str
+    base_model: str
+
+    @property
+    def id(self) -> str:
+        return f"{self.entity}/{self.project}/{self.name}"
+
+    async def get_step(self) -> int: ...
 
 
 class Models(AsyncAPIResource):
