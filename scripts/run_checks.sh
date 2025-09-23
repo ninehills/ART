@@ -87,14 +87,14 @@ if [[ "$(uname)" == "Linux" ]]; then
     TMP_PYRIGHT_JSON=$(mktemp)
     echo "  Running: uv run pyright --outputjson src tests"
     # Capture JSON output quietly regardless of success/failure
-    if uv run pyright --outputjson src > "$TMP_PYRIGHT_JSON" 2>/dev/null; then
+    if uv run pyright --outputjson src tests > "$TMP_PYRIGHT_JSON" 2>/dev/null; then
         : # success, continue
     else
         : # non-zero exit means errors may be present; we'll parse JSON next
     fi
 
     # Parse counts from JSON (errors, warnings, information)
-    PYRIGHT_COUNTS=$(python3 - "$TMP_PYRIGHT_JSON" <<'PY'
+    PYRIGHT_COUNTS=$(uv run python - "$TMP_PYRIGHT_JSON" <<'PY'
 import json, sys
 path = sys.argv[1]
 try:

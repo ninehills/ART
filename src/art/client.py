@@ -90,7 +90,6 @@ class TrainingJobs(AsyncAPIResource):
 
 class Client(AsyncAPIClient):
     api_key: str
-    base_url: str
 
     def __init__(
         self, *, api_key: str | None = None, base_url: str | None = None
@@ -102,10 +101,9 @@ class Client(AsyncAPIClient):
                 "The api_key client option must be set either by passing api_key to the client or by setting the WANDB_API_KEY environment variable"
             )
         self.api_key = api_key
-        self.base_url = base_url or "http://0.0.0.0:8000/v1"
         super().__init__(
             version=__version__,
-            base_url=self.base_url,
+            base_url=base_url or "http://0.0.0.0:8000/v1",
             _strict_response_validation=False,
         )
 
