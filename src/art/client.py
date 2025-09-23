@@ -14,6 +14,8 @@ from typing_extensions import override
 
 from openai import AsyncOpenAI, BaseModel, _exceptions
 
+from .trajectories import TrajectoryGroup
+
 
 class Model(BaseModel):
     entity: str
@@ -25,7 +27,15 @@ class Model(BaseModel):
     def id(self) -> str:
         return f"{self.entity}/{self.project}/{self.name}"
 
-    async def get_step(self) -> int: ...
+    async def get_step(self) -> int:
+        raise NotImplementedError("get_step is not implemented")
+        # TODO: implement get_step
+        return 0
+
+    async def train(self, trajectory_groups: list[TrajectoryGroup]) -> None:
+        raise NotImplementedError("train is not implemented")
+        # TODO: implement train
+        pass
 
 
 class Models(AsyncAPIResource):
@@ -37,7 +47,7 @@ class Models(AsyncAPIResource):
         name: str | None = None,
         base_model: str,
     ) -> Model:
-        return await self._post(
+        model = await self._post(
             "/models",
             cast_to=Model,
             body={
@@ -45,6 +55,36 @@ class Models(AsyncAPIResource):
                 "project": project,
                 "name": name,
                 "base_model": base_model,
+            },
+        )
+
+        async def get_step() -> int:
+            return 0
+
+        model.get_step = get_step
+
+        async def train(trajectory_groups: list[TrajectoryGroup]) -> None: ...
+
+        model.train = train
+        return model
+
+
+class TrainingJob(BaseModel): ...
+
+
+class TrainingJobs(AsyncAPIResource):
+    async def create(
+        self,
+        *,
+        model_id: str,
+        trajectory_groups: list[TrajectoryGroup],
+    ) -> TrainingJob:
+        return await self._post(
+            "/training-jobs",
+            cast_to=TrainingJob,
+            body={
+                "model_id": model_id,
+                "trajectory_groups": trajectory_groups,
             },
         )
 
@@ -73,6 +113,10 @@ class Client(AsyncAPIClient):
     @cached_property
     def models(self) -> Models:
         return Models(cast(AsyncOpenAI, self))
+
+    @cached_property
+    def training_jobs(self) -> TrainingJobs:
+        return TrainingJobs(cast(AsyncOpenAI, self))
 
     ############################
     # AsyncOpenAI overrides #
