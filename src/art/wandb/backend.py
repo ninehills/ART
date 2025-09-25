@@ -50,6 +50,10 @@ class WandBBackend(Backend):
         model.id = client_model.id
         model.entity = client_model.entity
 
+    def _model_inference_name(self, model: "TrainableModel") -> str:
+        assert model.entity is not None, "Model entity is required"
+        return f"{model.entity}/{model.project}/{model.name}"
+
     async def _get_step(self, model: "TrainableModel") -> int:
         return 0
 

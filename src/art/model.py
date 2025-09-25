@@ -344,7 +344,11 @@ class TrainableModel(Model[ModelConfig], Generic[ModelConfig]):
         # code (and any user code) can create an OpenAI client immediately.
         self.inference_base_url = base_url
         self.inference_api_key = api_key
-        self.inference_model_name = self.name
+        self.inference_model_name = (
+            hasattr(backend, "_model_inference_name")
+            and getattr(backend, "_model_inference_name")(self)
+            or self.name
+        )
 
     async def get_step(self) -> int:
         """
