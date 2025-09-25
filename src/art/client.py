@@ -1,7 +1,9 @@
+import asyncio
 import os
 from typing import cast
 
 import httpx
+from openai import AsyncOpenAI, BaseModel, _exceptions
 from openai._base_client import AsyncAPIClient
 from openai._compat import cached_property
 from openai._qs import Querystring
@@ -11,8 +13,6 @@ from openai._utils import is_mapping
 from openai._version import __version__
 from openai.resources.models import AsyncModels  # noqa
 from typing_extensions import override
-
-from openai import AsyncOpenAI, BaseModel, _exceptions
 
 from .trajectories import TrajectoryGroup
 
@@ -64,16 +64,23 @@ class Models(AsyncAPIResource):
         model.get_step = get_step
 
         async def train(trajectory_groups: list[TrajectoryGroup]) -> None:
-            await cast("Client", self._client).training_jobs.create(
+            training_job = await cast("Client", self._client).training_jobs.create(
                 model_id=model.id,
                 trajectory_groups=trajectory_groups,
             )
+            while training_job.status != "COMPLETED":
+                await asyncio.sleep(1)
+                training_job = await cast(
+                    "Client", self._client
+                ).training_jobs.retrieve(training_job.id)
 
         model.train = train
         return model
 
 
-class TrainingJob(BaseModel): ...
+class TrainingJob(BaseModel):
+    id: int
+    status: str
 
 
 class TrainingJobs(AsyncAPIResource):
@@ -93,6 +100,12 @@ class TrainingJobs(AsyncAPIResource):
                     for trajectory_group in trajectory_groups
                 ],
             },
+        )
+
+    async def retrieve(self, training_job_id: int) -> TrainingJob:
+        return await self._get(
+            f"/training-jobs/{training_job_id}",
+            cast_to=TrainingJob,
         )
 
 
