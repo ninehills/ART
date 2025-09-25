@@ -3,7 +3,6 @@ import os
 from typing import cast
 
 import httpx
-from openai import AsyncOpenAI, BaseModel, _exceptions
 from openai._base_client import AsyncAPIClient
 from openai._compat import cached_property
 from openai._qs import Querystring
@@ -14,18 +13,17 @@ from openai._version import __version__
 from openai.resources.models import AsyncModels  # noqa
 from typing_extensions import override
 
+from openai import AsyncOpenAI, BaseModel, _exceptions
+
 from .trajectories import TrajectoryGroup
 
 
 class Model(BaseModel):
+    id: str
     entity: str
     project: str
     name: str
     base_model: str
-
-    @property
-    def id(self) -> str:
-        return f"{self.entity}/{self.project}/{self.name}"
 
     async def get_step(self) -> int:
         raise NotImplementedError("get_step is not implemented")
