@@ -1,8 +1,6 @@
 import asyncio
 from typing import TYPE_CHECKING, AsyncIterator, Literal
 
-from tqdm import auto as tqdm
-
 from art.client import Client
 from art.utils.deploy_model import LoRADeploymentJob, LoRADeploymentProvider
 
@@ -20,7 +18,7 @@ class WandBBackend(Backend):
         self, *, api_key: str | None = None, base_url: str | None = None
     ) -> None:
         client = Client(api_key=api_key, base_url=base_url)
-        super().__init__(base_url=str(self._client.base_url))
+        super().__init__(base_url=str(client.base_url))
         self._client = client
 
     async def close(self) -> None:
