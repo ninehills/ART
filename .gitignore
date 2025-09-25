@@ -18,3 +18,5 @@ trajectories/
 .claude/
 .vscode/
 .ruff_cache/
+!/src/art/wandb/
+!/src/art/wandb/**
