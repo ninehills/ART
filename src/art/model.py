@@ -55,6 +55,8 @@ class Model(
 
     name: str
     project: str
+    entity: str | None = None
+    id: str | None = None
     config: ModelConfig
     # Discriminator field for FastAPI serialization
     trainable: bool = False
@@ -77,6 +79,8 @@ class Model(
         *,
         name: str,
         project: str,
+        entity: str | None = None,
+        id: str | None = None,
         config: ModelConfig | None = None,
         inference_api_key: str | None = None,
         inference_base_url: str | None = None,
@@ -86,6 +90,7 @@ class Model(
         super().__init__(
             name=name,
             project=project,
+            entity=entity,
             config=config,
             inference_api_key=inference_api_key,
             inference_base_url=inference_base_url,
@@ -99,6 +104,8 @@ class Model(
         *,
         name: str,
         project: str,
+        entity: str | None = None,
+        id: str | None = None,
         config: None = None,
         inference_api_key: str | None = None,
         inference_base_url: str | None = None,
@@ -111,6 +118,8 @@ class Model(
         *,
         name: str,
         project: str,
+        entity: str | None = None,
+        id: str | None = None,
         config: ModelConfig,
         inference_api_key: str | None = None,
         inference_base_url: str | None = None,
@@ -254,6 +263,8 @@ class TrainableModel(Model[ModelConfig], Generic[ModelConfig]):
         *,
         name: str,
         project: str,
+        entity: str | None = None,
+        id: str | None = None,
         config: ModelConfig | None = None,
         base_model: str,
         _internal_config: dev.InternalModelConfig | None = None,
@@ -262,6 +273,8 @@ class TrainableModel(Model[ModelConfig], Generic[ModelConfig]):
         super().__init__(
             name=name,
             project=project,
+            entity=entity,
+            id=id,
             config=config,
             base_model=base_model,  # type: ignore
             **kwargs,
@@ -276,6 +289,8 @@ class TrainableModel(Model[ModelConfig], Generic[ModelConfig]):
         *,
         name: str,
         project: str,
+        entity: str | None = None,
+        id: str | None = None,
         config: None = None,
         base_model: str,
         _internal_config: dev.InternalModelConfig | None = None,
@@ -287,6 +302,8 @@ class TrainableModel(Model[ModelConfig], Generic[ModelConfig]):
         *,
         name: str,
         project: str,
+        entity: str | None = None,
+        id: str | None = None,
         config: ModelConfig,
         base_model: str,
         _internal_config: dev.InternalModelConfig | None = None,
