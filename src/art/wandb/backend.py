@@ -34,17 +34,21 @@ class WandBBackend(Backend):
         Args:
             model: An art.Model instance.
         """
+        from art import TrainableModel
+
         if not isinstance(model, TrainableModel):
             print(
                 "Registering a non-trainable model with the WandB backend is not supported."
             )
             return
-        await self._client.models.create(
+        client_model = await self._client.models.create(
             entity=model.entity,
             project=model.project,
             name=model.name,
             base_model=model.base_model,
         )
+        model.id = client_model.id
+        model.entity = client_model.entity
 
     async def _get_step(self, model: "TrainableModel") -> int:
         return 0
