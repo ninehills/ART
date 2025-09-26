@@ -1,16 +1,18 @@
 import asyncio
 import os
-from typing import cast
+from typing import AsyncIterator, TypedDict, cast
 
 import httpx
-from openai._base_client import AsyncAPIClient
+from openai._base_client import AsyncAPIClient, make_request_options
 from openai._compat import cached_property
 from openai._qs import Querystring
 from openai._resource import AsyncAPIResource
-from openai._types import Omit
-from openai._utils import is_mapping
+from openai._types import NOT_GIVEN, NotGiven, Omit
+from openai._utils import is_mapping, maybe_transform
 from openai._version import __version__
-from openai.resources.models import AsyncModels  # noqa
+from openai.pagination import AsyncCursorPage
+from openai.resources.files import AsyncFiles  # noqa: F401
+from openai.resources.models import AsyncModels  # noqa: F401
 from typing_extensions import override
 
 from openai import AsyncOpenAI, BaseModel, _exceptions
@@ -26,14 +28,38 @@ class Model(BaseModel):
     base_model: str
 
     async def get_step(self) -> int:
-        raise NotImplementedError("get_step is not implemented")
-        # TODO: implement get_step
-        return 0
+        raise NotImplementedError
 
     async def train(self, trajectory_groups: list[TrajectoryGroup]) -> None:
-        raise NotImplementedError("train is not implemented")
-        # TODO: implement train
-        pass
+        raise NotImplementedError
+
+
+class ModelListParams(TypedDict, total=False):
+    after: str
+    """A cursor for use in pagination.
+
+    `after` is an object ID that defines your place in the list. For instance, if
+    you make a list request and receive 100 objects, ending with obj_foo, your
+    subsequent call can include after=obj_foo in order to fetch the next page of the
+    list.
+    """
+
+    limit: int
+    """A limit on the number of objects to be returned.
+
+    Limit can range between 1 and 100, and the default is 20.
+    """
+
+    # order: Literal["asc", "desc"]
+    # """Sort order by the `created_at` timestamp of the objects.
+
+    # `asc` for ascending order and `desc` for descending order.
+    # """
+
+    entity: str
+    project: str
+    name: str
+    base_model: str
 
 
 class Models(AsyncAPIResource):
@@ -45,16 +71,67 @@ class Models(AsyncAPIResource):
         name: str | None = None,
         base_model: str,
     ) -> Model:
-        model = await self._post(
-            "/models",
-            cast_to=Model,
-            body={
-                "entity": entity,
-                "project": project,
-                "name": name,
-                "base_model": base_model,
-            },
+        return self._patch_model(
+            await self._post(
+                "/models",
+                cast_to=Model,
+                body={
+                    "entity": entity,
+                    "project": project,
+                    "name": name,
+                    "base_model": base_model,
+                },
+            )
         )
+
+    async def list(
+        self,
+        *,
+        after: str | NotGiven = NOT_GIVEN,
+        limit: int | NotGiven = NOT_GIVEN,
+        # order: Literal["asc", "desc"] | NotGiven = NOT_GIVEN,
+        entity: str | NotGiven = NOT_GIVEN,
+        project: str | NotGiven = NOT_GIVEN,
+        name: str | NotGiven = NOT_GIVEN,
+        base_model: str | NotGiven = NOT_GIVEN,
+        # # Use the following arguments if you need to pass additional parameters to the API that aren't available via kwargs.
+        # # The extra values given here take precedence over values defined on the client or passed to this method.
+        # extra_headers: Headers | None = None,
+        # extra_query: Query | None = None,
+        # extra_body: Body | None = None,
+        # timeout: float | httpx.Timeout | None | NotGiven = NOT_GIVEN,
+    ) -> AsyncIterator[Model]:
+        """
+        Lists the currently available models, and provides basic information about each
+        one such as the owner and availability.
+        """
+        async for model in self._get_api_list(
+            "/models",
+            page=AsyncCursorPage[Model],
+            options=make_request_options(
+                # extra_headers=extra_headers,
+                # extra_query=extra_query,
+                # extra_body=extra_body,
+                # timeout=timeout,
+                query=maybe_transform(
+                    {
+                        "after": after,
+                        "limit": limit,
+                        # "order": order,
+                        "entity": entity,
+                        "project": project,
+                        "name": name,
+                        "base_model": base_model,
+                    },
+                    ModelListParams,
+                ),
+            ),
+            model=Model,
+        ):
+            yield self._patch_model(model)
+
+    def _patch_model(self, model: Model) -> Model:
+        """Patch model instance with async method implementations."""
 
         async def get_step() -> int:
             return 0
