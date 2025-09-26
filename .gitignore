@@ -20,3 +20,4 @@ trajectories/
 .ruff_cache/
 !/src/art/wandb/
 !/src/art/wandb/**
+/src/art/wandb/__pycache__/

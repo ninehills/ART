@@ -207,10 +207,21 @@ def tokenize_trajectory(
                 == tokenizer.decode(token_ids[start - 4])
             ):
                 start -= 4
-            token_ids[start:end] = (
-                int(token_logprob.token.split(":")[1])
-                for token_logprob in token_logprobs
-            )
+            try:
+                token_ids[start:end] = (
+                    int(token_logprob.token.split(":")[1])
+                    for token_logprob in token_logprobs
+                )
+            except IndexError:
+                token_ids[start:end] = [
+                    token_id if token_id is not None else tokenizer.eos_token_id
+                    for token_id in tokenizer.convert_tokens_to_ids(
+                        [
+                            token_logprob.token or tokenizer.eos_token
+                            for token_logprob in token_logprobs
+                        ]
+                    )
+                ]  # type: ignore
             logprobs[start:end] = (
                 token_logprob.logprob for token_logprob in token_logprobs
             )
