@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from ..model import Model, TrainableModel
 
 
-class WandBBackend(Backend):
+class ServerlessBackend(Backend):
     def __init__(
         self, *, api_key: str | None = None, base_url: str | None = None
     ) -> None:
