@@ -41,11 +41,13 @@ class ServerlessBackend(Backend):
                 "Registering a non-trainable model with the WandB backend is not supported."
             )
             return
+
         client_model = await self._client.models.create(
             entity=model.entity,
             project=model.project,
             name=model.name,
             base_model=model.base_model,
+            return_existing=True,
         )
         model.id = client_model.id
         model.entity = client_model.entity
@@ -55,7 +57,12 @@ class ServerlessBackend(Backend):
         return f"{model.entity}/{model.project}/{model.name}"
 
     async def _get_step(self, model: "TrainableModel") -> int:
-        return 0
+        assert model.id is not None, "Model ID is required"
+        async for checkpoint in self._client.checkpoints.list(
+            limit=1, model_id=model.id
+        ):
+            return checkpoint.step
+        raise ValueError("No checkpoints found for model")
 
     async def _delete_checkpoints(
         self,

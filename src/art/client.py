@@ -3,7 +3,7 @@ import os
 from typing import AsyncIterator, TypedDict, cast
 
 import httpx
-from openai._base_client import AsyncAPIClient, make_request_options
+from openai._base_client import AsyncAPIClient, AsyncPaginator, make_request_options
 from openai._compat import cached_property
 from openai._qs import Querystring
 from openai._resource import AsyncAPIResource
@@ -18,6 +18,45 @@ from typing_extensions import override
 from openai import AsyncOpenAI, BaseModel, _exceptions
 
 from .trajectories import TrajectoryGroup
+
+
+class Checkpoint(BaseModel):
+    id: str
+    model_id: str
+    step: int
+
+
+class CheckpointListParams(TypedDict, total=False):
+    model_id: str
+
+
+class Checkpoints(AsyncAPIResource):
+    def list(
+        self,
+        *,
+        after: str | NotGiven = NOT_GIVEN,
+        limit: int | NotGiven = NOT_GIVEN,
+        model_id: str | NotGiven = NOT_GIVEN,
+    ) -> AsyncPaginator[Checkpoint, AsyncCursorPage[Checkpoint]]:
+        return self._get_api_list(
+            "/checkpoints",
+            page=AsyncCursorPage[Checkpoint],
+            options=make_request_options(
+                # extra_headers=extra_headers,
+                # extra_query=extra_query,
+                # extra_body=extra_body,
+                # timeout=timeout,
+                query=maybe_transform(
+                    {
+                        "after": after,
+                        "limit": limit,
+                        "model_id": model_id,
+                    },
+                    CheckpointListParams,
+                ),
+            ),
+            model=Checkpoint,
+        )
 
 
 class Model(BaseModel):
@@ -70,6 +109,7 @@ class Models(AsyncAPIResource):
         project: str | None = None,
         name: str | None = None,
         base_model: str,
+        return_existing: bool = False,
     ) -> Model:
         return self._patch_model(
             await self._post(
@@ -206,6 +246,10 @@ class Client(AsyncAPIClient):
     @cached_property
     def models(self) -> Models:
         return Models(cast(AsyncOpenAI, self))
+
+    @cached_property
+    def checkpoints(self) -> Checkpoints:
+        return Checkpoints(cast(AsyncOpenAI, self))
 
     @cached_property
     def training_jobs(self) -> TrainingJobs:
