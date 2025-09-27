@@ -1,6 +1,6 @@
 import asyncio
 import os
-from typing import AsyncIterator, Literal, TypedDict, cast, overload
+from typing import AsyncIterator, Literal, TypedDict, cast
 
 import httpx
 from openai._base_client import AsyncAPIClient, AsyncPaginator, make_request_options
@@ -31,19 +31,11 @@ class CheckpointListParams(TypedDict, total=False):
 
 
 class Checkpoints(AsyncAPIResource):
-    @overload
-    async def retrieve(self, *, model_id: str, step: int) -> Checkpoint: ...
-
-    @overload
     async def retrieve(
-        self, *, model_id: str, latest: Literal[True] = True
-    ) -> Checkpoint: ...
-
-    async def retrieve(
-        self, *, model_id: str, step: int = 0, latest: bool = False
+        self, *, model_id: str, step: int | Literal["latest"]
     ) -> Checkpoint:
         return await self._get(
-            f"/preview/models/{model_id}/checkpoints/{step if not latest else 'latest'}",
+            f"/preview/models/{model_id}/checkpoints/{step}",
             cast_to=Checkpoint,
         )
 

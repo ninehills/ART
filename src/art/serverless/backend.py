@@ -58,11 +58,10 @@ class ServerlessBackend(Backend):
 
     async def _get_step(self, model: "TrainableModel") -> int:
         assert model.id is not None, "Model ID is required"
-        async for checkpoint in self._client.checkpoints.list(
-            limit=1, model_id=model.id
-        ):
-            return checkpoint.step
-        raise ValueError("No checkpoints found for model")
+        checkpoint = await self._client.checkpoints.retrieve(
+            model_id=model.id, step="latest"
+        )
+        return checkpoint.step
 
     async def _delete_checkpoints(
         self,
