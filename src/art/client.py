@@ -1,6 +1,6 @@
 import asyncio
 import os
-from typing import AsyncIterator, TypedDict, cast
+from typing import AsyncIterator, Literal, TypedDict, cast, overload
 
 import httpx
 from openai._base_client import AsyncAPIClient, AsyncPaginator, make_request_options
@@ -31,15 +31,31 @@ class CheckpointListParams(TypedDict, total=False):
 
 
 class Checkpoints(AsyncAPIResource):
+    @overload
+    async def retrieve(self, *, model_id: str, step: int) -> Checkpoint: ...
+
+    @overload
+    async def retrieve(
+        self, *, model_id: str, latest: Literal[True] = True
+    ) -> Checkpoint: ...
+
+    async def retrieve(
+        self, *, model_id: str, step: int = 0, latest: bool = False
+    ) -> Checkpoint:
+        return await self._get(
+            f"/preview/models/{model_id}/checkpoints/{step if not latest else 'latest'}",
+            cast_to=Checkpoint,
+        )
+
     def list(
         self,
         *,
         after: str | NotGiven = NOT_GIVEN,
         limit: int | NotGiven = NOT_GIVEN,
-        model_id: str | NotGiven = NOT_GIVEN,
+        model_id: str,
     ) -> AsyncPaginator[Checkpoint, AsyncCursorPage[Checkpoint]]:
         return self._get_api_list(
-            "/checkpoints",
+            f"/preview/models/{model_id}/checkpoints",
             page=AsyncCursorPage[Checkpoint],
             options=make_request_options(
                 # extra_headers=extra_headers,
@@ -50,7 +66,6 @@ class Checkpoints(AsyncAPIResource):
                     {
                         "after": after,
                         "limit": limit,
-                        "model_id": model_id,
                     },
                     CheckpointListParams,
                 ),
@@ -113,7 +128,7 @@ class Models(AsyncAPIResource):
     ) -> Model:
         return self._patch_model(
             await self._post(
-                "/models",
+                "/preview/models",
                 cast_to=Model,
                 body={
                     "entity": entity,
@@ -147,7 +162,7 @@ class Models(AsyncAPIResource):
         one such as the owner and availability.
         """
         async for model in self._get_api_list(
-            "/models",
+            "/preview/models",
             page=AsyncCursorPage[Model],
             options=make_request_options(
                 # extra_headers=extra_headers,
@@ -207,7 +222,7 @@ class TrainingJobs(AsyncAPIResource):
         trajectory_groups: list[TrajectoryGroup],
     ) -> TrainingJob:
         return await self._post(
-            "/training-jobs",
+            "/preview/training-jobs",
             cast_to=TrainingJob,
             body={
                 "model_id": model_id,
@@ -220,7 +235,7 @@ class TrainingJobs(AsyncAPIResource):
 
     async def retrieve(self, training_job_id: int) -> TrainingJob:
         return await self._get(
-            f"/training-jobs/{training_job_id}",
+            f"/preview/training-jobs/{training_job_id}",
             cast_to=TrainingJob,
         )
 
