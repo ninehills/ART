@@ -120,6 +120,7 @@ class Models(AsyncAPIResource):
                     "project": project,
                     "name": name,
                     "base_model": base_model,
+                    "return_existing": return_existing,
                 },
             )
         )
