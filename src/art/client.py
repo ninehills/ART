@@ -3,6 +3,7 @@ import os
 from typing import AsyncIterator, Literal, TypedDict, cast
 
 import httpx
+from openai import AsyncOpenAI, BaseModel, _exceptions
 from openai._base_client import AsyncAPIClient, AsyncPaginator, make_request_options
 from openai._compat import cached_property
 from openai._qs import Querystring
@@ -14,8 +15,6 @@ from openai.pagination import AsyncCursorPage
 from openai.resources.files import AsyncFiles  # noqa: F401
 from openai.resources.models import AsyncModels  # noqa: F401
 from typing_extensions import override
-
-from openai import AsyncOpenAI, BaseModel, _exceptions
 
 from .trajectories import TrajectoryGroup
 
