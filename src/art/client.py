@@ -201,9 +201,14 @@ class Models(AsyncAPIResource):
         return model
 
 
+class ExperimentalTrainingConfig(TypedDict, total=False):
+    learning_rate: float
+
+
 class TrainingJob(BaseModel):
     id: int
     status: str
+    experimental_config: ExperimentalTrainingConfig
 
 
 class TrainingJobs(AsyncAPIResource):
@@ -212,6 +217,7 @@ class TrainingJobs(AsyncAPIResource):
         *,
         model_id: str,
         trajectory_groups: list[TrajectoryGroup],
+        experimental_config: ExperimentalTrainingConfig | None = None,
     ) -> TrainingJob:
         return await self._post(
             "/preview/training-jobs",
@@ -222,6 +228,7 @@ class TrainingJobs(AsyncAPIResource):
                     trajectory_group.model_dump()
                     for trajectory_group in trajectory_groups
                 ],
+                "experimental_config": experimental_config,
             },
         )
 

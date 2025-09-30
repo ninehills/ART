@@ -98,6 +98,7 @@ class ServerlessBackend(Backend):
         training_job = await self._client.training_jobs.create(
             model_id=model.id,
             trajectory_groups=trajectory_groups,
+            experimental_config=dict(learning_rate=config.learning_rate),
         )
         while training_job.status != "COMPLETED":
             await asyncio.sleep(1)
