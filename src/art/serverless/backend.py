@@ -69,7 +69,22 @@ class ServerlessBackend(Backend):
         benchmark: str,
         benchmark_smoothing: float,
     ) -> None:
-        raise NotImplementedError
+        # TODO: potentially implement benchmark smoothing
+        max_metric: float | None = None
+        max_step: int | None = None
+        all_steps: list[int] = []
+        async for checkpoint in self._client.checkpoints.list(model_id=model.id):
+            metric = checkpoint.metrics.get(benchmark, None)
+            if metric is not None and (max_metric is None or metric > max_metric):
+                max_metric = metric
+                max_step = checkpoint.step
+            all_steps.append(checkpoint.step)
+        steps_to_delete = [step for step in all_steps[:-1] if step != max_step]
+        if steps_to_delete:
+            await self._client.checkpoints.delete(
+                model_id=model.id,
+                steps=steps_to_delete,
+            )
 
     async def _prepare_backend_for_training(
         self,

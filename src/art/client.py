@@ -3,7 +3,6 @@ import os
 from typing import AsyncIterator, Literal, TypedDict, cast
 
 import httpx
-from openai import AsyncOpenAI, BaseModel, _exceptions
 from openai._base_client import AsyncAPIClient, AsyncPaginator, make_request_options
 from openai._compat import cached_property
 from openai._qs import Querystring
@@ -16,6 +15,8 @@ from openai.resources.files import AsyncFiles  # noqa: F401
 from openai.resources.models import AsyncModels  # noqa: F401
 from typing_extensions import override
 
+from openai import AsyncOpenAI, BaseModel, _exceptions
+
 from .trajectories import TrajectoryGroup
 
 
@@ -23,10 +24,16 @@ class Checkpoint(BaseModel):
     id: str
     model_id: str
     step: int
+    metrics: dict[str, float]
 
 
 class CheckpointListParams(TypedDict, total=False):
     model_id: str
+
+
+class DeleteCheckpointsResponse(BaseModel):
+    deleted_count: int
+    not_found_steps: list[int]
 
 
 class Checkpoints(AsyncAPIResource):
@@ -62,6 +69,16 @@ class Checkpoints(AsyncAPIResource):
                 ),
             ),
             model=Checkpoint,
+        )
+
+    async def delete(
+        self, *, model_id: str, steps: list[int]
+    ) -> DeleteCheckpointsResponse:
+        return await self._delete(
+            f"/preview/models/{model_id}/checkpoints",
+            body={"steps": steps},
+            cast_to=DeleteCheckpointsResponse,
+            options=dict(max_retries=0),
         )
 
 
@@ -128,6 +145,7 @@ class Models(AsyncAPIResource):
                     "base_model": base_model,
                     "return_existing": return_existing,
                 },
+                options=dict(max_retries=0),
             )
         )
 
@@ -229,6 +247,7 @@ class TrainingJobs(AsyncAPIResource):
                 ],
                 "experimental_config": experimental_config,
             },
+            options=dict(max_retries=0),
         )
 
     async def retrieve(self, training_job_id: int) -> TrainingJob:
