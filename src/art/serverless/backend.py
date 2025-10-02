@@ -78,7 +78,6 @@ class ServerlessBackend(Backend):
             if metric is not None and (max_metric is None or metric > max_metric):
                 max_metric = metric
                 max_step = checkpoint.step
-            print(f"Checkpoint: {checkpoint.step} {metric}")
             all_steps.append(checkpoint.step)
         steps_to_delete = [step for step in all_steps[1:] if step != max_step]
         if steps_to_delete:
