@@ -1,6 +1,6 @@
 import asyncio
 import os
-from typing import AsyncIterator, Literal, TypedDict, cast
+from typing import AsyncIterator, Iterable, Literal, TypedDict, cast
 
 import httpx
 from openai._base_client import AsyncAPIClient, AsyncPaginator, make_request_options
@@ -72,7 +72,7 @@ class Checkpoints(AsyncAPIResource):
         )
 
     async def delete(
-        self, *, model_id: str, steps: list[int]
+        self, *, model_id: str, steps: Iterable[int]
     ) -> DeleteCheckpointsResponse:
         return await self._delete(
             f"/preview/models/{model_id}/checkpoints",
