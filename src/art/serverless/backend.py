@@ -137,7 +137,7 @@ class ServerlessBackend(Backend):
             ),
         )
         after: str | None = None
-        num_gradient_steps: int | None = None
+        num_sequences: int | None = None
         pbar: tqdm.tqdm | None = None
         while True:
             await asyncio.sleep(0.5)
@@ -145,14 +145,14 @@ class ServerlessBackend(Backend):
                 training_job_id=training_job.id, after=after or NOT_GIVEN
             ):
                 if event.type == "gradient_step":
-                    assert pbar is not None and num_gradient_steps is not None
+                    assert pbar is not None and num_sequences is not None
                     pbar.update(1)
                     pbar.set_postfix(event.data)
-                    yield {**event.data, "num_gradient_steps": num_gradient_steps}
+                    yield {**event.data, "num_gradient_steps": num_sequences}
                 elif event.type == "training_started":
-                    num_gradient_steps = event.data["num_gradient_steps"]
+                    num_sequences = event.data["num_sequences"]
                     if pbar is None:
-                        pbar = tqdm.tqdm(total=num_gradient_steps, desc="train")
+                        pbar = tqdm.tqdm(total=num_sequences, desc="train")
                     continue
                 elif event.type == "training_ended":
                     return
