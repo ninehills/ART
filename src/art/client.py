@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import os
 from typing import AsyncIterator, Iterable, Literal, TypedDict, cast
@@ -34,6 +36,11 @@ class CheckpointListParams(TypedDict, total=False):
 class DeleteCheckpointsResponse(BaseModel):
     deleted_count: int
     not_found_steps: list[int]
+
+
+
+class LogResponse(BaseModel):
+    success: bool
 
 
 class Checkpoints(AsyncAPIResource):
@@ -78,6 +85,27 @@ class Checkpoints(AsyncAPIResource):
             f"/preview/models/{model_id}/checkpoints",
             body={"steps": steps},
             cast_to=DeleteCheckpointsResponse,
+            options=dict(max_retries=0),
+        )
+
+    async def log_trajectories(
+        self,
+        *,
+        model_id: str,
+        trajectory_groups: list[TrajectoryGroup],
+        split: str = "val",
+    ) -> LogResponse:
+        return await self._post(
+            f"/preview/models/{model_id}/log",
+            body={
+                "model_id": model_id,
+                "trajectory_groups": [
+                    trajectory_group.model_dump()
+                    for trajectory_group in trajectory_groups
+                ],
+                "split": split,
+            },
+            cast_to=LogResponse,
             options=dict(max_retries=0),
         )
 

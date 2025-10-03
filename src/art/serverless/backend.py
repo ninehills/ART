@@ -1,5 +1,6 @@
 import asyncio
-from typing import TYPE_CHECKING, AsyncIterator, Literal
+from typing import TYPE_CHECKING, AsyncIterator, Literal, cast
+import os
 
 from art.client import Client
 from art.utils.deploy_model import LoRADeploymentJob, LoRADeploymentProvider
@@ -56,12 +57,16 @@ class ServerlessBackend(Backend):
         assert model.entity is not None, "Model entity is required"
         return f"{model.entity}/{model.project}/{model.name}"
 
-    async def _get_step(self, model: "TrainableModel") -> int:
-        assert model.id is not None, "Model ID is required"
-        checkpoint = await self._client.checkpoints.retrieve(
-            model_id=model.id, step="latest"
-        )
-        return checkpoint.step
+
+    async def _get_step(self, model: "Model") -> int:
+        if model.trainable:
+            assert model.id is not None, "Model ID is required"
+            checkpoint = await self._client.checkpoints.retrieve(
+                model_id=model.id, step="latest"
+            )
+            return checkpoint.step
+        # Non-trainable models do not have checkpoints/steps; default to 0
+        return 0
 
     async def _delete_checkpoints(
         self,
@@ -99,27 +104,16 @@ class ServerlessBackend(Backend):
         trajectory_groups: list[TrajectoryGroup],
         split: str = "val",
     ) -> None:
-        # TODO: Implement proper serverless logging via API
-        # For now, write to local jsonl file as a placeholder
-        import os
-        from pathlib import Path
+        # TODO: log trajectories to local file system?
 
-        from ..utils.trajectory_logging import serialize_trajectory_groups
+        if not model.trainable:
+            print(f"Model {model.name} is not trainable; skipping logging.")
+            return
 
-        # Create log directory (configurable via env var)
-        log_base = os.getenv("ART_SERVERLESS_LOG_DIR", "/tmp/serverless-training-logs")
-        log_dir = Path(log_base) / model.name / split
-        log_dir.mkdir(parents=True, exist_ok=True)
+        await self._client.checkpoints.log_trajectories(
+            model_id=model.id, trajectory_groups=trajectory_groups, split=split
+        )
 
-        # Get current step
-        step = await model.get_step()
-        file_path = log_dir / f"{step:04d}.jsonl"
-
-        # Write trajectory groups to jsonl
-        with open(file_path, "w") as f:
-            f.write(serialize_trajectory_groups(trajectory_groups))
-
-        print(f"[ServerlessBackend] Logged {len(trajectory_groups)} groups to {file_path}")
 
     async def _train_model(
         self,
