@@ -1,8 +1,10 @@
 import asyncio
-from typing import TYPE_CHECKING, AsyncIterator, Literal, cast
-import os
+from typing import TYPE_CHECKING, AsyncIterator, Literal
 
-from art.client import Client
+from openai._types import NOT_GIVEN
+from tqdm import auto as tqdm
+
+from art.client import Client, ExperimentalTrainingConfig
 from art.utils.deploy_model import LoRADeploymentJob, LoRADeploymentProvider
 
 from .. import dev
@@ -57,7 +59,6 @@ class ServerlessBackend(Backend):
         assert model.entity is not None, "Model entity is required"
         return f"{model.entity}/{model.project}/{model.name}"
 
-
     async def _get_step(self, model: "Model") -> int:
         if model.trainable:
             assert model.id is not None, "Model ID is required"
@@ -75,6 +76,7 @@ class ServerlessBackend(Backend):
         benchmark_smoothing: float,
     ) -> None:
         # TODO: potentially implement benchmark smoothing
+        assert model.id is not None, "Model ID is required"
         max_metric: float | None = None
         max_step: int | None = None
         all_steps: list[int] = []
@@ -110,10 +112,11 @@ class ServerlessBackend(Backend):
             print(f"Model {model.name} is not trainable; skipping logging.")
             return
 
+        assert model.id is not None, "Model ID is required"
+
         await self._client.checkpoints.log_trajectories(
             model_id=model.id, trajectory_groups=trajectory_groups, split=split
         )
-
 
     async def _train_model(
         self,
@@ -124,15 +127,36 @@ class ServerlessBackend(Backend):
         verbose: bool = False,
     ) -> AsyncIterator[dict[str, float]]:
         assert model.id is not None, "Model ID is required"
+
         training_job = await self._client.training_jobs.create(
             model_id=model.id,
             trajectory_groups=trajectory_groups,
-            experimental_config=dict(learning_rate=config.learning_rate),
+            experimental_config=ExperimentalTrainingConfig(
+                learning_rate=config.learning_rate,
+                precalculate_logprobs=dev_config.get("precalculate_logprobs", None),
+            ),
         )
-        while training_job.status != "COMPLETED":
-            await asyncio.sleep(1)
-            training_job = await self._client.training_jobs.retrieve(training_job.id)
-            yield {"num_gradient_steps": 1}
+        after: str | None = None
+        num_gradient_steps: int | None = None
+        pbar: tqdm.tqdm | None = None
+        while True:
+            await asyncio.sleep(0.5)
+            async for event in self._client.training_jobs.events.list(
+                training_job_id=training_job.id, after=after or NOT_GIVEN
+            ):
+                if event.type == "gradient_step":
+                    assert pbar is not None and num_gradient_steps is not None
+                    pbar.update(1)
+                    pbar.set_postfix(event.data)
+                    yield {**event.data, "num_gradient_steps": num_gradient_steps}
+                elif event.type == "training_started":
+                    num_gradient_steps = event.data["num_gradient_steps"]
+                    if pbar is None:
+                        pbar = tqdm.tqdm(total=num_gradient_steps, desc="train")
+                    continue
+                elif event.type == "training_ended":
+                    return
+                after = event.id
 
     # ------------------------------------------------------------------
     # Experimental support for S3

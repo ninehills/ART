@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import os
-from typing import AsyncIterator, Iterable, Literal, TypedDict, cast
+from typing import Any, AsyncIterator, Iterable, Literal, TypedDict, cast
 
 import httpx
 from openai._base_client import AsyncAPIClient, AsyncPaginator, make_request_options
@@ -36,7 +36,6 @@ class CheckpointListParams(TypedDict, total=False):
 class DeleteCheckpointsResponse(BaseModel):
     deleted_count: int
     not_found_steps: list[int]
-
 
 
 class LogResponse(BaseModel):
@@ -247,11 +246,12 @@ class Models(AsyncAPIResource):
 
 
 class ExperimentalTrainingConfig(TypedDict, total=False):
-    learning_rate: float
+    learning_rate: float | None
+    precalculate_logprobs: bool | None
 
 
 class TrainingJob(BaseModel):
-    id: int
+    id: str
     status: str
     experimental_config: ExperimentalTrainingConfig
 
@@ -282,6 +282,46 @@ class TrainingJobs(AsyncAPIResource):
         return await self._get(
             f"/preview/training-jobs/{training_job_id}",
             cast_to=TrainingJob,
+        )
+
+    @cached_property
+    def events(self) -> TrainingJobEvents:
+        return TrainingJobEvents(cast(AsyncOpenAI, self._client))
+
+
+class TrainingJobEvent(BaseModel):
+    id: str
+    type: Literal["training_started", "gradient_step", "training_ended"]
+    data: dict[str, Any]
+
+
+class TrainingJobEventListParams(TypedDict, total=False):
+    after: str
+    limit: int
+
+
+class TrainingJobEvents(AsyncAPIResource):
+    def list(
+        self,
+        *,
+        training_job_id: str,
+        after: str | NotGiven = NOT_GIVEN,
+        limit: int | NotGiven = NOT_GIVEN,
+    ) -> AsyncPaginator[TrainingJobEvent, AsyncCursorPage[TrainingJobEvent]]:
+        return self._get_api_list(
+            f"/preview/training-jobs/{training_job_id}/events",
+            page=AsyncCursorPage[TrainingJobEvent],
+            options=make_request_options(
+                query=maybe_transform(
+                    {
+                        "after": after,
+                        "limit": limit,
+                        "training_job_id": training_job_id,
+                    },
+                    TrainingJobEventListParams,
+                ),
+            ),
+            model=TrainingJobEvent,
         )
 
 
