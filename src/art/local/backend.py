@@ -136,6 +136,7 @@ class LocalBackend(Backend):
                 output_dir=get_model_dir(model=model, art_path=self._path),
                 config=model._internal_config,
             )
+            print(f"Model Config: {config}")
             if config.get("torchtune_args") is not None:
                 service_class = TorchtuneService
             elif config.get("_decouple_vllm_and_unsloth", False):

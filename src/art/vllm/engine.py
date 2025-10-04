@@ -43,7 +43,6 @@ async def get_llm(args: vllm.AsyncEngineArgs) -> AsyncLLM:
         replace(
             args,
             worker_extension_cls=f"{WorkerExtension.__module__}.{WorkerExtension.__qualname__}",
-            enable_sleep_mode=True,
         )
     )
     await run_on_workers(llm, patch_allocator)
