@@ -293,6 +293,7 @@ class LocalBackend(Backend):
             api_key=api_key,
         )
         async with aiohttp.ClientSession() as session:
+            error_count = 0
             while True:
                 # Wait 30 seconds before checking again
                 await asyncio.sleep(30)
@@ -324,13 +325,17 @@ class LocalBackend(Backend):
                             model=model_name,
                             timeout=timeout,
                         )
+                        error_count = 0
                         # get the completion response, exit the loop
                         break
                     except Exception as e:
                         # If the server is sleeping, a failed health check is okay
                         if await self._services[model_name].vllm_engine_is_sleeping():
                             continue
-                        raise e
+                        error_count += 1
+                        print(f"Error {error_count} while monitoring server: {e}")
+                        if error_count > 3:
+                            raise e
 
     async def _log(
         self,
