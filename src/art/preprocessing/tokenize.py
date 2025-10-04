@@ -212,7 +212,7 @@ def tokenize_trajectory(
                     int(token_logprob.token.split(":")[1])
                     for token_logprob in token_logprobs
                 )
-            except IndexError:
+            except (IndexError, ValueError):
                 token_ids[start:end] = [
                     token_id if token_id is not None else tokenizer.eos_token_id
                     for token_id in tokenizer.convert_tokens_to_ids(

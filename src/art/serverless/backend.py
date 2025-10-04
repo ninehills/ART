@@ -57,7 +57,7 @@ class ServerlessBackend(Backend):
 
     def _model_inference_name(self, model: "TrainableModel") -> str:
         assert model.entity is not None, "Model entity is required"
-        return f"{model.entity}/{model.project}/{model.name}"
+        return f"wandb-artifact:///{model.entity}/{model.project}/{model.name}"
 
     async def _get_step(self, model: "Model") -> int:
         if model.trainable:
