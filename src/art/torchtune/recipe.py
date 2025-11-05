@@ -28,6 +28,13 @@ from torchao.float8 import precompute_float8_dynamic_scale_for_fsdp
 from torchtune import config, modules, training, utils
 from torchtune.modules import TransformerDecoder
 from torchtune.modules.moe import utils as moe_utils
+from torchtune.modules.peft import (
+    AdapterModule,
+    get_adapter_params,
+    get_lora_module_names,
+    set_trainable_params,
+    validate_missing_and_unexpected_for_lora,
+)
 from torchtune.recipe_interfaces import FTRecipeInterface
 from torchtune.training import (
     VALID_BACKENDS_FOR_MEMORY_STATS,
@@ -211,6 +218,11 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
         self._optimizer_in_bwd = cfg.optimizer_in_bwd
         self._clip_grad_norm = cfg.clip_grad_norm
 
+        # LoRA settings
+        self._enable_lora = cfg.enable_lora
+        # When LoRA is enabled, only save adapter weights by default to save space
+        self._save_adapter_weights_only = self._enable_lora
+
         self._checkpoint_client = CheckpointClient(
             DictConfig(
                 {
@@ -375,6 +387,11 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
             fsdp_cpu_offload=self.fsdp_cpu_offload,
             reshard_after_forward=cfg.fsdp_reshard_after_forward,
             model_state_dict=checkpoint_dict[training.MODEL_KEY],
+            lora_weights_state_dict=(
+                checkpoint_dict[training.ADAPTER_KEY]
+                if training.ADAPTER_KEY in checkpoint_dict
+                else None
+            ),
             ac_mode=cfg.ac_mode,
             ac_option=cfg.ac_option,
         )
@@ -475,6 +492,7 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
         fsdp_cpu_offload: bool,
         reshard_after_forward: bool,
         model_state_dict: dict[str, Any],
+        lora_weights_state_dict: Optional[dict[str, Any]] = None,
         custom_sharded_layers: Optional[list[str]] = None,
         ac_mode: Optional[str] = None,
         ac_option: Optional[int] = None,
@@ -487,6 +505,34 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
               full state dicts are loaded with ``torch.load(mmap=True)``
         """
 
+        # Setup LoRA configuration if enabled
+        if self._enable_lora:
+            self._lora_rank = getattr(cfg_model, "lora_rank", None)
+            self._lora_alpha = getattr(cfg_model, "lora_alpha", None)
+            self._lora_attn_modules = list(
+                getattr(cfg_model, "lora_attn_modules", ["q_proj", "v_proj"])
+            )
+            self._apply_lora_to_mlp = getattr(cfg_model, "apply_lora_to_mlp", False)
+            self._apply_lora_to_output = getattr(
+                cfg_model, "apply_lora_to_output", False
+            )
+
+            if self._lora_rank is None or self._lora_alpha is None:
+                raise ValueError(
+                    "When enable_lora=True, model config must include lora_rank and lora_alpha"
+                )
+
+            self._adapter_config = {
+                "r": self._lora_rank,
+                "lora_alpha": self._lora_alpha,
+                "target_modules": get_lora_module_names(
+                    self._lora_attn_modules,
+                    self._apply_lora_to_mlp,
+                    self._apply_lora_to_output,
+                ),
+                "peft_type": "LORA",
+            }
+
         utils.log_rank_zero(
             self._logger,
             "Distributed training is enabled. Instantiating model and loading checkpoint on Rank 0 ...",
@@ -498,6 +544,10 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
             torch.device("meta") if self.is_distributed else self._device,
         ):
             model = config.instantiate(cfg_model.model_dump(by_alias=True))
+
+        # Set trainable parameters for LoRA
+        if self._enable_lora:
+            set_trainable_params(model, get_adapter_params(model))
 
         if self._compile_model:
             training.compile_model(model, verbose=self._is_rank_zero)
@@ -588,16 +638,49 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
             model=model,
         )
 
+        # Load LoRA weights first if they exist
+        if self._enable_lora and lora_weights_state_dict:
+            if isinstance(model, FSDPModule):
+                lora_missing, lora_unexpected = (
+                    training.load_from_full_model_state_dict(
+                        model,
+                        lora_weights_state_dict,
+                        self._device,
+                        cpu_offload=fsdp_cpu_offload,
+                    )
+                )
+            else:
+                # For non-FSDP models, use standard load_state_dict
+                result = model.load_state_dict(lora_weights_state_dict, strict=False)
+                lora_missing, lora_unexpected = (
+                    result.missing_keys,
+                    result.unexpected_keys,
+                )
+        else:
+            lora_missing, lora_unexpected = None, None
+
+        # Initialize LoRA params if this is the first time training with LoRA
+        if self._enable_lora:
+            with training.set_default_dtype(self._dtype), self._device:
+                lora_device = "cpu" if fsdp_cpu_offload else self._device
+                for m in model.modules():
+                    if isinstance(m, AdapterModule) and not lora_weights_state_dict:
+                        # lora may not be covered in state dict
+                        # if finetune for the 1st time
+                        m.to_empty(device=lora_device)
+                        m.initialize_parameters()
+
         with training.set_default_dtype(self._dtype), self._device:
             for m in model.modules():
                 # RoPE is not covered in state dict
                 if hasattr(m, "rope_init"):
                     m.rope_init()  # type: ignore
 
+        # Load base model weights
         if isinstance(model, FSDPModule):
             # This method will convert the full model state dict into a sharded state
             # dict and load into the model
-            training.load_from_full_model_state_dict(
+            base_missing, base_unexpected = training.load_from_full_model_state_dict(
                 model,
                 model_state_dict,
                 self._device,
@@ -605,7 +688,27 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
                 cpu_offload=fsdp_cpu_offload,
             )
         else:
-            model.load_state_dict(model_state_dict)
+            result = model.load_state_dict(model_state_dict, strict=True)
+            base_missing, base_unexpected = result.missing_keys, result.unexpected_keys
+
+        # Initialize DoRA magnitude if applicable
+        if self._enable_lora:
+            for m in model.modules():
+                if hasattr(m, "initialize_dora_magnitude"):
+                    m.initialize_dora_magnitude()
+
+        # Validate LoRA loading if enabled
+        if self._enable_lora:
+            validate_missing_and_unexpected_for_lora(
+                lora_attn_modules=self._lora_attn_modules,
+                apply_lora_to_mlp=self._apply_lora_to_mlp,
+                apply_lora_to_output=self._apply_lora_to_output,
+                state_dict_keys=list(model.state_dict().keys()),
+                base_missing=base_missing,
+                base_unexpected=base_unexpected,
+                lora_missing=lora_missing,
+                lora_unexpected=lora_unexpected,
+            )
 
         # activation offloading
         self.activations_handling_ctx = training.get_act_offloading_ctx_manager(
@@ -1147,18 +1250,30 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
                         if not self.is_distributed:
                             # signal that the GPUs are free
                             Path(f"{self._output_dir}/pids.txt").unlink(missing_ok=True)
-                        self._checkpoint_client.save_checkpoint(
-                            model=self._model,
-                            optimizer=self._optimizer_or_optim_ckpt_wrapper,
-                            training_progress=TrainingProgress(
+                        # Prepare checkpoint save arguments
+                        ckpt_save_args = {
+                            "model": self._model,
+                            "optimizer": self._optimizer_or_optim_ckpt_wrapper,
+                            "training_progress": TrainingProgress(
                                 seed=self.seed,
                                 epochs_run=self.epochs_run,
                                 total_epochs=1,
                                 max_steps_per_epoch=self.max_steps_per_epoch,
                             ),
-                            epoch=0,
-                            single_device=not self.is_distributed,
-                        )
+                            "epoch": 0,
+                            "single_device": not self.is_distributed,
+                        }
+
+                        # Add LoRA-specific arguments if enabled
+                        if self._enable_lora:
+                            ckpt_save_args["adapter_config"] = (
+                                self._adapter_config.copy()
+                            )
+                            ckpt_save_args["adapter_only"] = (
+                                self._save_adapter_weights_only
+                            )
+
+                        self._checkpoint_client.save_checkpoint(**ckpt_save_args)
                         if self._is_rank_zero:
                             # Ensure checkpoints directory exists
                             checkpoint_dir = os.path.join(
