@@ -18,6 +18,7 @@ trajectories/
 .claude/
 .vscode/
 .ruff_cache/
+*.backup
 !/src/art/wandb/
 !/src/art/wandb/**
 /src/art/wandb/__pycache__/
