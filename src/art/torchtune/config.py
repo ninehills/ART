@@ -87,8 +87,8 @@ class RecipeConfig(BaseModel):
     device: str = Field(default="cuda")
     dtype: Literal["fp32", "bf16"] = Field(default="bf16")
 
-    # LoRA settings (optional - if not set, full finetuning is performed)
-    enable_lora: bool = Field(default=False)
+    # Checkpoint settings
+    save_adapter_weights_only: bool = Field(default=False)
 
     # Training parameters
     seed: Optional[int] = Field(default=None)

@@ -218,10 +218,11 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
         self._optimizer_in_bwd = cfg.optimizer_in_bwd
         self._clip_grad_norm = cfg.clip_grad_norm
 
-        # LoRA settings
-        self._enable_lora = cfg.enable_lora
-        # When LoRA is enabled, only save adapter weights by default to save space
-        self._save_adapter_weights_only = self._enable_lora
+        # Checkpoint settings
+        self._save_adapter_weights_only = cfg.save_adapter_weights_only
+
+        # LoRA detection flag - will be set during model setup
+        self._is_lora_model = False
 
         self._checkpoint_client = CheckpointClient(
             DictConfig(
@@ -505,10 +506,13 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
               full state dicts are loaded with ``torch.load(mmap=True)``
         """
 
-        # Setup LoRA configuration if enabled
-        if self._enable_lora:
-            self._lora_rank = getattr(cfg_model, "lora_rank", None)
-            self._lora_alpha = getattr(cfg_model, "lora_alpha", None)
+        # Detect if this is a LoRA model by checking for lora_rank in model config
+        lora_rank = getattr(cfg_model, "lora_rank", None)
+        if lora_rank is not None:
+            # This is a LoRA model
+            self._is_lora_model = True
+            self._lora_rank = lora_rank
+            self._lora_alpha = getattr(cfg_model, "lora_alpha", 16)  # Default alpha
             self._lora_attn_modules = list(
                 getattr(cfg_model, "lora_attn_modules", ["q_proj", "v_proj"])
             )
@@ -516,11 +520,6 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
             self._apply_lora_to_output = getattr(
                 cfg_model, "apply_lora_to_output", False
             )
-
-            if self._lora_rank is None or self._lora_alpha is None:
-                raise ValueError(
-                    "When enable_lora=True, model config must include lora_rank and lora_alpha"
-                )
 
             self._adapter_config = {
                 "r": self._lora_rank,
@@ -546,7 +545,7 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
             model = config.instantiate(cfg_model.model_dump(by_alias=True))
 
         # Set trainable parameters for LoRA
-        if self._enable_lora:
+        if self._is_lora_model:
             set_trainable_params(model, get_adapter_params(model))
 
         if self._compile_model:
@@ -639,7 +638,7 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
         )
 
         # Load LoRA weights first if they exist
-        if self._enable_lora and lora_weights_state_dict:
+        if self._is_lora_model and lora_weights_state_dict:
             if isinstance(model, FSDPModule):
                 lora_missing, lora_unexpected = (
                     training.load_from_full_model_state_dict(
@@ -660,7 +659,7 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
             lora_missing, lora_unexpected = None, None
 
         # Initialize LoRA params if this is the first time training with LoRA
-        if self._enable_lora:
+        if self._is_lora_model:
             with training.set_default_dtype(self._dtype), self._device:
                 lora_device = "cpu" if fsdp_cpu_offload else self._device
                 for m in model.modules():
@@ -692,13 +691,13 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
             base_missing, base_unexpected = result.missing_keys, result.unexpected_keys
 
         # Initialize DoRA magnitude if applicable
-        if self._enable_lora:
+        if self._is_lora_model:
             for m in model.modules():
                 if hasattr(m, "initialize_dora_magnitude"):
                     m.initialize_dora_magnitude()
 
         # Validate LoRA loading if enabled
-        if self._enable_lora:
+        if self._is_lora_model:
             validate_missing_and_unexpected_for_lora(
                 lora_attn_modules=self._lora_attn_modules,
                 apply_lora_to_mlp=self._apply_lora_to_mlp,
@@ -1265,7 +1264,7 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
                         }
 
                         # Add LoRA-specific arguments if enabled
-                        if self._enable_lora:
+                        if self._is_lora_model:
                             ckpt_save_args["adapter_config"] = (
                                 self._adapter_config.copy()
                             )

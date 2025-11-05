@@ -190,6 +190,9 @@ class TorchtuneService:
                     return prefix
             return model.split("_")[0]
 
+        # Check if this is a LoRA model (model name contains "lora")
+        is_lora_model = "lora" in torchtune_args["model"]
+
         program_and_args = [
             "python",  # Use Python interpreter
             f"{os.path.dirname(torchtune.__file__)}/_cli/tune.py",
@@ -211,6 +214,54 @@ class TorchtuneService:
             "metric_logger.log_dir=null",
             f"enable_activation_offloading={torchtune_args.get('enable_activation_offloading', False)}",
         ]
+
+        # If this is a LoRA model, pass LoRA parameters from PeftArgs
+        if is_lora_model:
+            peft_args = self.config.get("peft_args", {})
+
+            # Map PeftArgs to torchtune LoRA parameters
+            lora_rank = peft_args.get("r", 8)
+            lora_alpha = peft_args.get("lora_alpha", 16)
+            target_modules = peft_args.get("target_modules", ["q_proj", "v_proj"])
+
+            # Convert target_modules to torchtune's format
+            # Note: ART uses "o_proj", torchtune uses "output_proj"
+            target_modules_normalized = []
+            for m in target_modules:
+                if m == "o_proj":
+                    target_modules_normalized.append("output_proj")
+                else:
+                    target_modules_normalized.append(m)
+
+            # Attention modules: q_proj, k_proj, v_proj, output_proj
+            attn_module_names = {"q_proj", "k_proj", "v_proj", "output_proj"}
+            lora_attn_modules = [
+                m for m in target_modules_normalized if m in attn_module_names
+            ]
+
+            # MLP modules: gate_proj, up_proj, down_proj
+            mlp_module_names = {"gate_proj", "up_proj", "down_proj"}
+            apply_lora_to_mlp = any(
+                m in mlp_module_names for m in target_modules_normalized
+            )
+
+            # Output/LM head
+            output_module_names = {"output", "lm_head"}
+            apply_lora_to_output = any(
+                m in output_module_names for m in target_modules_normalized
+            )
+
+            program_and_args.extend(
+                [
+                    f"model.lora_rank={lora_rank}",
+                    f"model.lora_alpha={lora_alpha}",
+                    f"model.lora_attn_modules={lora_attn_modules}",
+                    f"model.apply_lora_to_mlp={apply_lora_to_mlp}",
+                    f"model.apply_lora_to_output={apply_lora_to_output}",
+                    "save_adapter_weights_only=True",  # LoRA models save only adapter weights by default
+                ]
+            )
+
         return await asyncio.subprocess.create_subprocess_exec(
             *program_and_args,
             stdout=asyncio.subprocess.PIPE,
