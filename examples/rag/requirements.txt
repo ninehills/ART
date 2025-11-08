@@ -1,0 +1,5 @@
+# git+https://github.com/ninehills/FlashRAG.git
+faiss-gpu-cu12==1.12.0
+fastmcp==2.12.2
+sentence-transformers==5.1.0
+openai-agents==0.3.3
