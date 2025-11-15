@@ -21,6 +21,7 @@ from openai import AsyncOpenAI
 from agents.models.openai_chatcompletions import OpenAIChatCompletionsModel
 from openai.resources.chat.completions.completions import AsyncCompletions
 from openai.types.chat.chat_completion import Choice
+from art.utils import limit_concurrency
 
 from utils import compute_scores
 
@@ -232,7 +233,9 @@ def calculate_rewards(ret: Dict[str, Any], scenario: Scenario, messages_and_choi
 
     return rewards
 
+# TODO： 限制并发数为 10，避免打满 vllm 服务器（Hard code）
 @weave.op
+@limit_concurrency(10)
 async def rollout(model: art.Model, scenario: Scenario, max_tokens: int = 4096, rewards: List[str] = ["correct"], prompt_name: str = "MultiHop-RAG-NoThink", tokenizer = None,
         thinking_token_optimal: int = 100, think_token_max: int = 600) -> art.Trajectory:
     traj = art.Trajectory(
