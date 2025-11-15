@@ -146,13 +146,16 @@ $ export MODELS_DIR=~/models
 $ export CUDA_VISIBLE_DEVICES=0
 
 # Full training
-$ python art_rollout.py train "${MODELS_DIR}/Qwen3-1.7B" "qwen3-1.7b-thinking-torchtune-00" --max_seq_length 8192 --max_tokens 3072 --gpu_memory_utilization 0.6 --groups_per_step 1 --gradient_accumulation_steps 4 --learning_rate 3e-6 --rewards correct,short_think,answer_format --prompt_name default --backend torchtune --torchtune_args '{"model": "qwen3_1_7b_instruct", "model_type": "QWEN3", "async_weight_syncing": true, "enable_activation_offloading": true, "tensor_parallel_dim": 1}'
-
-# Lora training
-
+$ python art_rollout.py train "${MODELS_DIR}/Qwen3-1.7B" "qwen3-1.7b-thinking-torchtune-00" --max_seq_length 8192 --max_tokens 3072 --gpu_memory_utilization 0.6 --groups_per_step 10 --gradient_accumulation_steps 4 --learning_rate 3e-6 --rewards correct,short_think,answer_format --prompt_name default --backend torchtune --torchtune_args '{"model": "qwen3_1_7b_instruct", "model_type": "QWEN3", "async_weight_syncing": true, "enable_activation_offloading": true, "tensor_parallel_dim": 1}' --delete_ckpt_metric train/reward_correct
 ```
 
+![alt text](qwen3-1.7b-thinking-torchtune-00.png)
+
 hardware: 4 x L20 48GB (for normal training)
+
+Known Issues:
+1. You need manual copy model config to ckpt folder.
+2. Lora is not supported yet.
 
 ## 5. Serveless backend RL
 

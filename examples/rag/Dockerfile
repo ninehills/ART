@@ -9,7 +9,9 @@ RUN /opt/conda/bin/conda create -n art python==3.12
 
 RUN --mount=type=cache,target=/root/.cache \
     cd ART && \
-    /opt/conda/envs/art/bin/python -m pip install -e .[backend]
+    /opt/conda/envs/art/bin/python -m pip install -e .[backend] && \
+    cd torchtune && \
+    /opt/conda/envs/art/bin/python -m pip install -e .
 
 RUN --mount=type=cache,target=/root/.cache \
     cd ART && \
@@ -20,4 +22,5 @@ RUN --mount=type=cache,target=/root/.cache \
 COPY requirements.txt .
 RUN --mount=type=cache,target=/root/.cache \
     /opt/conda/envs/art/bin/python -m pip install -r requirements.txt
-COPY . ./rag
+
+COPY . ART/examples/rag
