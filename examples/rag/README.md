@@ -12,13 +12,14 @@ $ conda create -n art python==3.12 nvidia/label/cuda-12.8.1::cuda-toolkit
 
 $ conda activate art
 $ pip install -e .[backend]
+$ cd torchtune && pip install -e .
 
 $ pip freeze | egrep "vllm|unsloth|torch"
 torch==2.7.1
 torchao==0.14.1
 torchaudio==2.7.1
 torchdata==0.11.0
-torchtune==0.6.1
+-e git+https://github.com/ninehills/torchtune.git@93c049bb1daa1232f4c327ac2590ec5ab00c0a2b#egg=torchtune&subdirectory=../../torchtune
 torchvision==0.22.1
 unsloth==2025.10.3
 unsloth_zoo==2025.10.3
@@ -86,6 +87,12 @@ npx @modelcontextprotocol/inspector
 ## URL: http://127.0.0.1:8099/sse
 ```
 
+### 1.4 Dockerfile
+
+```bash
+docker build -t art-rag-train:latest .
+```
+
 ## 2. Test the agent
 
 ```bash
@@ -110,6 +117,8 @@ $ python analyze_trajectory.py --output_dir output/default/Qwen3-1.7B/ --with_ev
 
 ## 3. Unsloth backend RL
 
+Hardware: 1 x GTX4090 24GB
+
 ```bash
 $ export MODELS_DIR=~/models
 # set WANDB_API_KEY in env file
@@ -117,13 +126,44 @@ $ cp env.template .env
 # Test the rollout
 $ python art_rollout.py test "${MODELS_DIR}/Qwen3-1.7B" "Qwen3-1.7B" --max_seq_length 8192 --max_tokens 3072 --gpu_memory_utilization 0.6 --groups_per_step 10 --gradient_accumulation_steps 1 --rewards correct,short_think,answer_format --prompt_name default
 # Run the RL training
-python art_rollout.py train "${MODELS_DIR}/Qwen3-1.7B" "qwen3-1.7b-thinking-rlvr-01" --max_seq_length 8192 --max_tokens 3072 --gpu_memory_utilization 0.6 --groups_per_step 10 --gradient_accumulation_steps 1 --rewards correct,short_think,answer_format --prompt_name default
+$ python art_rollout.py train "${MODELS_DIR}/Qwen3-1.7B" "qwen3-1.7b-thinking-rlvr-01" --max_seq_length 8192 --max_tokens 3072 --gpu_memory_utilization 0.6 --groups_per_step 10 --gradient_accumulation_steps 1 --rewards correct,short_think,answer_format --prompt_name default --thinking_token_optimal 300 --think_token_max 1000
 ```
 
-FAQ:
-1. mcp server 需要预热，可以首先启动训练观察是否正常，再正式训练。
+Known Issues:
+1. mcp server need to be warmed up before training, you can start training first to observe whether it is normal, and then start formal training.
+2. The training process may be hang up, you can just kill the process and re-run the training script to resume the training.
+
+Train log: (unfinished but the reward looks increasing good)
+
+![alt text](qwen3-1.7b-thinking-rlvr-01.png)
 
 ## 4. Torchtune backend multi-gpu RL
 
+hardware: 1 x GTX4090 24GB (for debug only)
+
+```bash
+$ export MODELS_DIR=~/models
+$ export CUDA_VISIBLE_DEVICES=0
+
+# Full training
+$ python art_rollout.py train "${MODELS_DIR}/Qwen3-1.7B" "qwen3-1.7b-thinking-torchtune-00" --max_seq_length 8192 --max_tokens 3072 --gpu_memory_utilization 0.6 --groups_per_step 1 --gradient_accumulation_steps 4 --learning_rate 3e-6 --rewards correct,short_think,answer_format --prompt_name default --backend torchtune --torchtune_args '{"model": "qwen3_1_7b_instruct", "model_type": "QWEN3", "async_weight_syncing": true, "enable_activation_offloading": true, "tensor_parallel_dim": 1}'
+
+# Lora training
+
+```
+
+hardware: 4 x L20 48GB (for normal training)
+
 ## 5. Serveless backend RL
 
+```bash
+# set wandb api keyh in .env
+# only support OpenPipe/Qwen3-14B-Instruct model
+python art_rollout.py train "OpenPipe/Qwen3-14B-Instruct" "qwen3-14b-rlvr-serverless-01" --max_seq_length 8192 --max_tokens 3072 --groups_per_step 10 --rewards correct,short_think,answer_format --prompt_name default --backend serverless --delete_ckpt_metric train/reward
+```
+
+Train log:
+
+![alt text](qwen3-14b-rlvr-serverless-01.png)
+
+> reward_correct is between 0 - 2.

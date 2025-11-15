@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from transformers import AutoTokenizer
 import art
 from art.local import LocalBackend
+from art.serverless.backend import ServerlessBackend
 from art.rewards import ruler_score_group
 from art.types import MessagesAndChoices, Message, Choice
 from art.utils import iterate_dataset
@@ -118,7 +119,9 @@ class Scenario(BaseModel):
     golden_answers: List[str]
     split: Literal["train", "val"]
 
-def calculate_rewards(ret: Dict[str, Any], scenario: Scenario, messages_and_choices: MessagesAndChoices, reward_list: List[str], max_tokens: int = 4096, tokenizer = None) -> Dict[str, float]:
+def calculate_rewards(ret: Dict[str, Any], scenario: Scenario, messages_and_choices: MessagesAndChoices,
+        reward_list: List[str], max_tokens: int = 4096, tokenizer = None,
+        thinking_token_optimal: int = 100, think_token_max: int = 600) -> Dict[str, float]:
     """
     Calculate individual rewards based on the reward list.
 
@@ -136,8 +139,8 @@ def calculate_rewards(ret: Dict[str, Any], scenario: Scenario, messages_and_choi
 
     # short_think 奖励的 token 阈值配置
     THINK_TOKEN_MIN = 10       # 最小允许 token 数量下限
-    THINK_TOKEN_OPTIMAL = 300  # 最优 token 数量上限
-    THINK_TOKEN_MAX = 1000      # 最大允许 token 数量上限
+    THINK_TOKEN_OPTIMAL = thinking_token_optimal  # 最优 token 数量上限
+    THINK_TOKEN_MAX = think_token_max      # 最大允许 token 数量上限
 
     rewards = {}
 
@@ -230,7 +233,8 @@ def calculate_rewards(ret: Dict[str, Any], scenario: Scenario, messages_and_choi
     return rewards
 
 @weave.op
-async def rollout(model: art.Model, scenario: Scenario, max_tokens: int = 4096, rewards: List[str] = ["correct"], prompt_name: str = "MultiHop-RAG-NoThink", tokenizer = None) -> art.Trajectory:
+async def rollout(model: art.Model, scenario: Scenario, max_tokens: int = 4096, rewards: List[str] = ["correct"], prompt_name: str = "MultiHop-RAG-NoThink", tokenizer = None,
+        thinking_token_optimal: int = 100, think_token_max: int = 600) -> art.Trajectory:
     traj = art.Trajectory(
         reward=0.0,
         messages_and_choices=[],
@@ -249,7 +253,7 @@ async def rollout(model: art.Model, scenario: Scenario, max_tokens: int = 4096, 
     deepsearch_agent = DeepSearchAgent(
         retriever_mcp_server_url="http://127.0.0.1:8099/sse",
         model=OpenAIChatCompletionsModel(
-            model=model.name,
+            model=model.get_inference_name(),
             openai_client=openai_client
         ),
         prompt_name=prompt_name,
@@ -272,13 +276,16 @@ async def rollout(model: art.Model, scenario: Scenario, max_tokens: int = 4096, 
         return traj.finish()
 
     # 计算所有奖励
-    reward_dict = calculate_rewards(ret, scenario, traj.messages_and_choices, rewards, max_tokens, tokenizer)
+    reward_dict = calculate_rewards(ret, scenario, traj.messages_and_choices, rewards, max_tokens, tokenizer,
+        thinking_token_optimal, think_token_max
+    )
 
     # 总奖励是所有奖励的和
     traj.reward = sum(reward_dict.values())
 
     # 保存各个奖励到 metadata
-    traj.metadata['reward_dict'] = reward_dict
+    for reward_type, score in reward_dict.items():
+        traj.metrics[f"reward_{reward_type}"] = score
 
     return traj
 
@@ -293,32 +300,45 @@ async def load_model(args) -> art.TrainableModel:
 
     tokenizer = AutoTokenizer.from_pretrained(args.base_model)
 
-    # To run on a T4, we need to override some config defaults.
-    engine_args = art.dev.EngineArgs(
-        enforce_eager=True,
-        enable_sleep_mode=not args.disable_sleep_mode
-    )
-    if args.gpu_memory_utilization:
-        engine_args["gpu_memory_utilization"] = args.gpu_memory_utilization
-
-    model._internal_config = art.dev.InternalModelConfig(
-        init_args=art.dev.InitArgs(
-            max_seq_length=args.max_seq_length,
-        ),
-        engine_args=engine_args,
-        _decouple_vllm_and_unsloth=args.decouple_vllm_and_unsloth,
-        trainer_args=art.dev.TrainerArgs(
-            gradient_accumulation_steps=args.gradient_accumulation_steps,
-        ),
-    )
-
     # Initialize the server
-    backend = LocalBackend(
-        # Normally we don't want to run the server in-process, but for the output
-        # to show up properly on Google Colab we'll enable this.
-        in_process=True,
-        path="./.art",
-    )
+    if args.backend == "serverless":
+        # use wandb serverless backend
+        backend = ServerlessBackend()
+        model._internal_config = art.dev.InternalModelConfig(
+            init_args=art.dev.InitArgs(
+                max_seq_length=args.max_seq_length,
+            )
+        )
+    else:
+        # use local backend
+        backend = LocalBackend(
+            # Normally we don't want to run the server in-process, but for the output
+            # to show up properly on Google Colab we'll enable this.
+            in_process=True,
+            path="./.art",
+        )
+        # To run on a T4, we need to override some config defaults.
+        engine_args = art.dev.EngineArgs(
+            enforce_eager=True,
+            enable_sleep_mode=not args.disable_sleep_mode
+        )
+        if args.gpu_memory_utilization:
+            engine_args["gpu_memory_utilization"] = args.gpu_memory_utilization
+
+        model_config = art.dev.InternalModelConfig(
+            init_args=art.dev.InitArgs(
+                max_seq_length=args.max_seq_length,
+            ),
+            engine_args=engine_args,
+            _decouple_vllm_and_unsloth=args.decouple_vllm_and_unsloth,
+            trainer_args=art.dev.TrainerArgs(
+                gradient_accumulation_steps=args.gradient_accumulation_steps,
+            ),
+        )
+        if args.backend == "torchtune":
+            print(f"Torchtune args: {args.torchtune_args}")
+            model_config["torchtune_args"] = art.dev.TorchtuneArgs(**args.torchtune_args)
+        model._internal_config = model_config
 
     if args.resume_ckpt:
         print(f"Resume checkpoint: {args.resume_ckpt}")
@@ -350,18 +370,20 @@ async def rollout_test(args):
             scenario = Scenario(**data, split="val")
             val_inputs.append(scenario)
     for scenario in val_inputs[:1]:
-        traj = await rollout(model, scenario, args.max_tokens, args.rewards, args.prompt_name, tokenizer)
+        traj = await rollout(model, scenario, args.max_tokens, args.rewards, args.prompt_name, tokenizer, 
+            args.thinking_token_optimal, args.think_token_max
+        )
         print(json.dumps(traj.for_logging(), ensure_ascii=False, indent=2))
 
 
 async def train(args):
     training_config = {
         "groups_per_step": args.groups_per_step,
-        "num_epochs": 1,
+        "num_epochs": args.num_epochs,
         # 这个框架不能调整 per_device_train_batch_size=2，那么最好的 gradient_accumulation_steps 是 rollouts_per_group / 2 的倍数
         # 但是因为默认使用了packing，也没啥意义了。
-        "rollouts_per_group": 8, 
-        "learning_rate": 3e-5,
+        "rollouts_per_group": args.rollouts_per_group, 
+        "learning_rate": args.learning_rate,
     }
     model, tokenizer = await load_model(args)
     train_dataset_file = "data/MultiHopRAG/train.jsonl"
@@ -383,16 +405,23 @@ async def train(args):
     for batch in train_iterator:
         print("Gathering trajectory groups with RULER scoring...")
 
+        if args.delete_ckpt_metric is not None:
+            print(f"Delete checkpoint by metric: {args.delete_ckpt_metric}")
+            await model.delete_checkpoints(args.delete_ckpt_metric)
+
         # Use gather_trajectory_groups with ruler_score_group
         groups = await art.gather_trajectory_groups(
             (
                 art.TrajectoryGroup(
-                    rollout(model, scenario, args.max_tokens, args.rewards, args.prompt_name, tokenizer)
+                    rollout(model, scenario, args.max_tokens, args.rewards, args.prompt_name, tokenizer, 
+                        args.thinking_token_optimal, args.think_token_max
+                    )
                     for _ in range(training_config["rollouts_per_group"])
                 )
                 for scenario in batch.items
             ),
             pbar_desc=f"train gather step {batch.step}",
+            max_exceptions=10, # hard code for now
         )
 
         scored_groups = []
@@ -445,12 +474,22 @@ if __name__ == "__main__":
     parser.add_argument("--disable_sleep_mode", action="store_true", help="Disable sleep mode (default: enabled)")
     parser.add_argument("--decouple_vllm_and_unsloth", action="store_true", help="Decouple vLLM and Unsloth (default: disabled)")
     parser.add_argument("--groups_per_step", type=int, default=2, help="Groups per step (default: 2)")
+    parser.add_argument("--rollouts_per_group", type=int, default=8, help="Rollouts per group (default: 8)")
     parser.add_argument("--gradient_accumulation_steps", type=int, default=1, help="Gradient accumulation steps (default: 1)")
     parser.add_argument("--rewards", type=str, default="correct", help="Comma-separated list of rewards: correct,short_think (default: correct)")
     parser.add_argument("--method", choices=["grpo", "gspo"], default="gspo", help="Training method (default: gspo)")
-    parser.add_argument("--prompt_name", type=str, default="MultiHop-RAG-NoThink", help="Prompt name (default: MultiHop-RAG-NoThink)")
+    parser.add_argument("--prompt_name", type=str, default="default", help="Prompt name (default: default)")
+    parser.add_argument("--backend", type=str, choices=["unsloth", "torchtune", "serverless"], default="unsloth", help="Backend to use (default: unsloth)")
+    parser.add_argument("--torchtune_args", type=str, default=None, help="Torchtune args (default:  empty), see src/art/dev/torchtune.py")
+    parser.add_argument("--num_epochs", type=int, default=1, help="Number of epochs (default: 1)")
+    parser.add_argument("--learning_rate", type=float, default=3e-5, help="Learning rate (lora-default: 3e-5, full: 3e-6)")
+    parser.add_argument("--delete_ckpt_metric", type=str, default=None, help="Delete checkpoint metric (default: None), such as train/reward")
+    parser.add_argument("--thinking_token_optimal", type=int, default=100, help="Optimal thinking token number (default: 100)")
+    parser.add_argument("--think_token_max", type=int, default=600, help="Max thinking token number (default: 600)")
+
 
     args = parser.parse_args()
+    args.torchtune_args = json.loads(args.torchtune_args or "{}")
 
     # Parse rewards string into list
     args.rewards = [r.strip() for r in args.rewards.split(",")]

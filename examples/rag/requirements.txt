@@ -3,3 +3,6 @@ faiss-gpu-cu12==1.12.0
 fastmcp==2.12.2
 sentence-transformers==5.1.0
 openai-agents==0.3.3
+# https://github.com/unslothai/unsloth/issues/3367
+# fix Offline Fine-tune using unsloth failed
+huggingface-hub==0.35.0

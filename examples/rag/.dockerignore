@@ -1,0 +1,6 @@
+.art/
+data/
+output/
+unsloth_compiled_cache/
+wandb/
+.env
